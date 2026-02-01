@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SA-2 SAMSIM - DCS World</title>
+    <link rel="stylesheet" href="css/samsim.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>SA-2 (S-75 Dvina) SAMSim</h1>
+                <span class="subtitle">DCS World Controller</span>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot disconnected"></span>
+                    <span class="status-text">Disconnected</span>
+                </div>
+                <div class="mission-time" id="missionTime">00:00:00</div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel - Radar Scope -->
+            <section class="radar-panel">
+                <div class="panel-header">
+                    <span class="panel-title">RADAR SCOPE - SNR-75 Fan Song</span>
+                    <div class="radar-mode" id="radarModeDisplay">STANDBY</div>
+                </div>
+                <div class="radar-container">
+                    <canvas id="radarScope" width="500" height="500"></canvas>
+                    <div class="radar-overlay">
+                        <div class="range-rings"></div>
+                    </div>
+                </div>
+                <div class="radar-controls">
+                    <div class="control-group">
+                        <label>Range (km)</label>
+                        <select id="radarRange">
+                            <option value="20">20</option>
+                            <option value="40">40</option>
+                            <option value="80" selected>80</option>
+                            <option value="160">160</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Antenna Az</label>
+                        <input type="range" id="antennaAz" min="0" max="360" value="0">
+                        <span id="antennaAzValue">0°</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Antenna El</label>
+                        <input type="range" id="antennaEl" min="0" max="85" value="5">
+                        <span id="antennaElValue">5°</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Center Panel - Target Info & Controls -->
+            <section class="control-panel">
+                <!-- Site Selection -->
+                <div class="site-selector">
+                    <label>Active Site:</label>
+                    <select id="siteSelect">
+                        <option value="">-- Select Site --</option>
+                    </select>
+                    <button id="initSiteBtn" class="btn btn-primary">Init Site</button>
+                </div>
+
+                <!-- System Controls -->
+                <div class="system-controls">
+                    <h3>System Controls</h3>
+                    <div class="button-row">
+                        <button id="btnPowerOn" class="btn btn-power">POWER ON</button>
+                        <button id="btnStandby" class="btn btn-standby">STANDBY</button>
+                        <button id="btnSearch" class="btn btn-search">SEARCH</button>
+                    </div>
+                    <div class="indicator-row">
+                        <div class="indicator" id="indPower">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">PWR</span>
+                        </div>
+                        <div class="indicator" id="indRadar">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">RDR</span>
+                        </div>
+                        <div class="indicator" id="indTrack">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">TRK</span>
+                        </div>
+                        <div class="indicator" id="indGuide">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">GDE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Target List -->
+                <div class="target-list-container">
+                    <h3>Detected Targets</h3>
+                    <div class="target-list" id="targetList">
+                        <!-- Targets will be populated here -->
+                        <div class="no-targets">No targets detected</div>
+                    </div>
+                </div>
+
+                <!-- Tracked Target Info -->
+                <div class="tracked-target" id="trackedTargetPanel">
+                    <h3>Tracked Target</h3>
+                    <div class="target-data" id="trackedTargetData">
+                        <div class="data-row">
+                            <span class="data-label">ID:</span>
+                            <span class="data-value" id="tgtId">---</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Range:</span>
+                            <span class="data-value" id="tgtRange">--- km</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Azimuth:</span>
+                            <span class="data-value" id="tgtAzimuth">---°</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Elevation:</span>
+                            <span class="data-value" id="tgtElevation">---°</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Altitude:</span>
+                            <span class="data-value" id="tgtAltitude">--- m</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Track Quality:</span>
+                            <div class="quality-bar">
+                                <div class="quality-fill" id="trackQualityBar"></div>
+                            </div>
+                            <span class="data-value" id="trackQuality">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement Controls -->
+                <div class="engagement-controls">
+                    <h3>Engagement</h3>
+                    <div class="button-row">
+                        <button id="btnDesignate" class="btn btn-designate">DESIGNATE</button>
+                        <button id="btnDropTrack" class="btn btn-drop">DROP TRACK</button>
+                    </div>
+                    <div class="button-row">
+                        <button id="btnLaunch" class="btn btn-launch">LAUNCH MISSILE</button>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="engAuthToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Engagement Auth</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoEngToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Auto Engage</span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel - Missile Status -->
+            <section class="missile-panel">
+                <h3>Missile Battery Status</h3>
+                <div class="missile-display">
+                    <div class="missile-count">
+                        <span class="missile-number" id="missilesReady">6</span>
+                        <span class="missile-label">Ready</span>
+                    </div>
+                    <div class="missile-indicators" id="missileIndicators">
+                        <!-- Missile indicators will be generated here -->
+                    </div>
+                </div>
+                <div class="missiles-in-flight">
+                    <span class="label">In Flight:</span>
+                    <span class="value" id="missilesInFlight">0</span>
+                </div>
+
+                <!-- Elevation Display (B-Scope Style) -->
+                <div class="elevation-scope">
+                    <h4>Elevation Display</h4>
+                    <canvas id="elevationScope" width="200" height="300"></canvas>
+                </div>
+
+                <!-- System Info -->
+                <div class="system-info">
+                    <h4>System Parameters</h4>
+                    <div class="info-row">
+                        <span>Max Range:</span>
+                        <span>160 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Engagement Range:</span>
+                        <span>7-45 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Max Altitude:</span>
+                        <span>30 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Missile Speed:</span>
+                        <span>1200 m/s</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer / Status Bar -->
+        <footer class="status-bar">
+            <div class="status-item">
+                <span class="label">WebSocket:</span>
+                <span class="value" id="wsStatus">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span class="label">DCS:</span>
+                <span class="value" id="dcsStatus">Not Connected</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Last Update:</span>
+                <span class="value" id="lastUpdate">--:--:--</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Init Site Modal -->
+    <div class="modal" id="initSiteModal">
+        <div class="modal-content">
+            <h2>Initialize SA-2 Site</h2>
+            <div class="form-group">
+                <label for="newSiteId">Site ID:</label>
+                <input type="text" id="newSiteId" placeholder="e.g., SA2-ALPHA">
+            </div>
+            <div class="form-group">
+                <label for="groupName">DCS Group Name:</label>
+                <input type="text" id="groupName" placeholder="e.g., SA-2 Site 1">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="confirmInitSite">Initialize</button>
+                <button class="btn btn-secondary" id="cancelInitSite">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/samsim.js"></script>
+</body>
+</html>

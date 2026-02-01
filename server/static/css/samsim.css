@@ -1,0 +1,770 @@
+/* SAMSIM CSS - SA-2 Control Interface */
+
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-dark: #0a0a0a;
+    --bg-panel: #1a1a1a;
+    --bg-control: #252525;
+    --border-color: #333;
+    --text-primary: #00ff00;
+    --text-secondary: #00aa00;
+    --text-dim: #006600;
+    --text-white: #ffffff;
+    --accent-red: #ff3333;
+    --accent-yellow: #ffff00;
+    --accent-orange: #ff8800;
+    --accent-blue: #00aaff;
+    --radar-green: #00ff00;
+    --radar-dim: #003300;
+    --button-bg: #2a2a2a;
+    --button-hover: #3a3a3a;
+    --button-active: #444;
+}
+
+body {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Container */
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: var(--bg-panel);
+    border-bottom: 2px solid var(--text-dim);
+}
+
+.header h1 {
+    font-size: 1.5em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-left: 15px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.status-dot.connected {
+    background-color: var(--text-primary);
+}
+
+.status-dot.disconnected {
+    background-color: var(--accent-red);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.mission-time {
+    font-size: 1.5em;
+    color: var(--accent-yellow);
+    font-weight: bold;
+    padding: 5px 15px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+}
+
+/* Main Content */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 400px 280px;
+    gap: 15px;
+    padding: 15px;
+    flex: 1;
+}
+
+/* Radar Panel */
+.radar-panel {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 10px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--text-dim);
+}
+
+.panel-title {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.radar-mode {
+    padding: 5px 15px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    color: var(--accent-yellow);
+    font-weight: bold;
+}
+
+.radar-container {
+    position: relative;
+    width: 500px;
+    height: 500px;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #001100;
+    border: 3px solid var(--text-dim);
+}
+
+#radarScope {
+    display: block;
+}
+
+.radar-controls {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--text-dim);
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.control-group label {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.control-group select,
+.control-group input[type="range"] {
+    background-color: var(--bg-control);
+    color: var(--text-primary);
+    border: 1px solid var(--text-dim);
+    padding: 5px;
+}
+
+.control-group select {
+    width: 80px;
+}
+
+.control-group input[type="range"] {
+    width: 100px;
+}
+
+/* Control Panel */
+.control-panel {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.site-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--text-dim);
+}
+
+.site-selector select {
+    flex: 1;
+    padding: 8px;
+    background-color: var(--bg-control);
+    color: var(--text-primary);
+    border: 1px solid var(--text-dim);
+}
+
+/* System Controls */
+.system-controls h3,
+.target-list-container h3,
+.tracked-target h3,
+.engagement-controls h3 {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 15px;
+    border: 2px solid var(--text-dim);
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.btn:hover {
+    background-color: var(--button-hover);
+    border-color: var(--text-secondary);
+}
+
+.btn:active {
+    background-color: var(--button-active);
+}
+
+.btn-primary {
+    background-color: #1a3a1a;
+    border-color: var(--text-secondary);
+}
+
+.btn-power {
+    background-color: #2a1a1a;
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.btn-power.active {
+    background-color: #1a3a1a;
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.btn-launch {
+    background-color: #3a1a1a;
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.btn-launch:hover {
+    background-color: #4a2a2a;
+}
+
+.btn-designate {
+    background-color: #1a2a3a;
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+.btn-drop {
+    background-color: #3a3a1a;
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+/* Indicators */
+.indicator-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+}
+
+.indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.indicator-light {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #333;
+    border: 2px solid #444;
+}
+
+.indicator.active .indicator-light {
+    background-color: var(--text-primary);
+    box-shadow: 0 0 10px var(--text-primary);
+}
+
+.indicator.warning .indicator-light {
+    background-color: var(--accent-yellow);
+    box-shadow: 0 0 10px var(--accent-yellow);
+}
+
+.indicator.danger .indicator-light {
+    background-color: var(--accent-red);
+    box-shadow: 0 0 10px var(--accent-red);
+}
+
+.indicator-label {
+    font-size: 0.7em;
+    color: var(--text-secondary);
+}
+
+/* Target List */
+.target-list-container {
+    flex: 1;
+    min-height: 150px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.target-list {
+    flex: 1;
+    overflow-y: auto;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    padding: 5px;
+}
+
+.no-targets {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 20px;
+}
+
+.target-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid var(--text-dim);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.target-item:hover {
+    background-color: #2a2a2a;
+}
+
+.target-item.selected {
+    background-color: #1a3a1a;
+    border-left: 3px solid var(--text-primary);
+}
+
+.target-item .target-id {
+    color: var(--accent-yellow);
+    font-weight: bold;
+}
+
+.target-item .target-info {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+}
+
+/* Tracked Target */
+.tracked-target {
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    padding: 10px;
+}
+
+.target-data {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.data-label {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+}
+
+.data-value {
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.quality-bar {
+    width: 80px;
+    height: 10px;
+    background-color: #222;
+    border: 1px solid var(--text-dim);
+    margin-right: 10px;
+}
+
+.quality-fill {
+    height: 100%;
+    background-color: var(--text-primary);
+    transition: width 0.3s;
+}
+
+/* Toggle Switches */
+.toggle-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.toggle input {
+    display: none;
+}
+
+.toggle-slider {
+    width: 50px;
+    height: 24px;
+    background-color: #333;
+    border: 2px solid var(--text-dim);
+    border-radius: 12px;
+    position: relative;
+    transition: all 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background-color: #666;
+    border-radius: 50%;
+    top: 1px;
+    left: 2px;
+    transition: all 0.3s;
+}
+
+.toggle input:checked + .toggle-slider {
+    background-color: #1a3a1a;
+    border-color: var(--text-primary);
+}
+
+.toggle input:checked + .toggle-slider::before {
+    background-color: var(--text-primary);
+    left: 28px;
+}
+
+.toggle-label {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+/* Missile Panel */
+.missile-panel {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.missile-panel h3,
+.missile-panel h4 {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.missile-display {
+    text-align: center;
+    padding: 15px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+}
+
+.missile-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.missile-number {
+    font-size: 3em;
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.missile-label {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.missile-indicators {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+}
+
+.missile-indicator {
+    width: 40px;
+    height: 80px;
+    background-color: #1a3a1a;
+    border: 2px solid var(--text-secondary);
+    border-radius: 5px 5px 20px 20px;
+    position: relative;
+    margin: 0 auto;
+}
+
+.missile-indicator.empty {
+    background-color: #1a1a1a;
+    border-color: #333;
+}
+
+.missile-indicator::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 15px solid var(--text-primary);
+}
+
+.missile-indicator.empty::after {
+    border-bottom-color: #333;
+}
+
+.missiles-in-flight {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--accent-orange);
+}
+
+.missiles-in-flight .value {
+    color: var(--accent-orange);
+    font-weight: bold;
+}
+
+/* Elevation Scope */
+.elevation-scope {
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    padding: 10px;
+    text-align: center;
+}
+
+#elevationScope {
+    background-color: #001100;
+    border: 2px solid var(--text-dim);
+}
+
+/* System Info */
+.system-info {
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    padding: 10px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #222;
+    font-size: 0.85em;
+}
+
+.info-row span:first-child {
+    color: var(--text-secondary);
+}
+
+.info-row span:last-child {
+    color: var(--text-primary);
+}
+
+/* Status Bar */
+.status-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 20px;
+    background-color: var(--bg-panel);
+    border-top: 2px solid var(--text-dim);
+}
+
+.status-item {
+    display: flex;
+    gap: 10px;
+    font-size: 0.85em;
+}
+
+.status-item .label {
+    color: var(--text-secondary);
+}
+
+.status-item .value {
+    color: var(--text-primary);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 25px;
+    min-width: 400px;
+}
+
+.modal-content h2 {
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    font-size: 1.2em;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-buttons .btn {
+    flex: 1;
+}
+
+.btn-secondary {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #888;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-control);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--text-dim);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+    .main-content {
+        grid-template-columns: 1fr 350px;
+    }
+
+    .missile-panel {
+        grid-column: span 2;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1000px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+
+    .radar-container {
+        width: 400px;
+        height: 400px;
+    }
+
+    #radarScope {
+        width: 400px;
+        height: 400px;
+    }
+
+    .missile-panel {
+        grid-template-columns: 1fr;
+    }
+}
