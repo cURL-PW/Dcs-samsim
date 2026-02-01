@@ -1136,3 +1136,333 @@ body {
     color: var(--text-dim);
     margin-right: 8px;
 }
+
+/* ECCM Controls Panel */
+.eccm-controls {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 8px;
+    margin-top: 8px;
+}
+
+.eccm-controls h3 {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.eccm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.eccm-item {
+    background-color: var(--bg-control);
+    padding: 6px;
+    border: 1px solid #222;
+}
+
+.eccm-item.slider-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.eccm-item.slider-item label {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    min-width: 30px;
+}
+
+.eccm-item.slider-item input[type="range"] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--text-dim);
+    border-radius: 2px;
+}
+
+.eccm-item.slider-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.eccm-item.slider-item span {
+    font-size: 0.7em;
+    color: var(--text-primary);
+    min-width: 30px;
+    text-align: right;
+}
+
+.ecm-status {
+    margin-top: 8px;
+    padding: 6px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+}
+
+.ecm-indicator {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    font-size: 0.8em;
+}
+
+.ecm-label {
+    color: var(--text-secondary);
+}
+
+.ecm-value {
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.ecm-value.jamming-detected {
+    color: var(--accent-red);
+    animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* IFF Panel */
+.iff-panel {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 8px;
+    margin-top: 8px;
+}
+
+.iff-panel h3 {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.iff-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.iff-mode-selector {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.iff-mode-selector label {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.iff-mode-selector select {
+    flex: 1;
+    padding: 4px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+.iff-response {
+    margin-top: 6px;
+    padding: 8px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    text-align: center;
+}
+
+.iff-status {
+    font-size: 1em;
+    font-weight: bold;
+}
+
+.iff-status.friendly {
+    color: var(--accent-blue);
+}
+
+.iff-status.hostile {
+    color: var(--accent-red);
+}
+
+.iff-status.unknown {
+    color: var(--accent-yellow);
+}
+
+/* Active Missiles Display */
+.active-missiles {
+    margin-top: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.active-missile-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    margin-bottom: 3px;
+    font-size: 0.8em;
+}
+
+.active-missile-item.boost {
+    border-color: var(--accent-orange);
+}
+
+.active-missile-item.sustain {
+    border-color: var(--accent-yellow);
+}
+
+.active-missile-item.terminal {
+    border-color: var(--accent-red);
+    animation: pulse-red 0.5s infinite;
+}
+
+.missile-id {
+    color: var(--text-secondary);
+}
+
+.missile-phase {
+    color: var(--accent-yellow);
+    font-weight: bold;
+}
+
+.missile-info {
+    color: var(--text-primary);
+}
+
+/* Kill Assessment Panel */
+.kill-assessment-panel {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 10px;
+}
+
+.kill-assessment-panel h3 {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.kill-assessment-display {
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    padding: 8px;
+}
+
+.assessment-status {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    padding: 6px;
+    margin-bottom: 6px;
+}
+
+.assessment-status.kill {
+    color: var(--text-primary);
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 1px solid var(--text-primary);
+}
+
+.assessment-status.miss {
+    color: var(--accent-red);
+    background-color: rgba(255, 0, 0, 0.1);
+    border: 1px solid var(--accent-red);
+}
+
+.assessment-status.pending {
+    color: var(--accent-yellow);
+}
+
+.assessment-details {
+    font-size: 0.8em;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+}
+
+.detail-label {
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    color: var(--text-primary);
+}
+
+.kill-history {
+    margin-top: 8px;
+    max-height: 80px;
+    overflow-y: auto;
+    font-size: 0.75em;
+}
+
+.kill-history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 5px;
+    border-bottom: 1px solid #222;
+}
+
+.kill-history-item.kill {
+    color: var(--text-primary);
+}
+
+.kill-history-item.miss {
+    color: var(--accent-red);
+}
+
+/* ECM Strobe styles for radar */
+.ecm-strobe-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* IFF symbols on radar */
+.iff-symbol {
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.iff-friendly {
+    color: var(--accent-blue);
+}
+
+.iff-hostile {
+    color: var(--accent-red);
+}
+
+.iff-unknown {
+    color: var(--accent-yellow);
+}
+
+/* Chaff cloud indicator */
+.chaff-indicator {
+    color: var(--accent-orange);
+    opacity: 0.7;
+}
+
+/* Missile trail on radar */
+.missile-trail {
+    stroke: var(--accent-red);
+    stroke-width: 2;
+    fill: none;
+}

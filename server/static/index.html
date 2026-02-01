@@ -266,6 +266,85 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- ECCM Controls -->
+                <div class="eccm-controls">
+                    <h3>ECCM Controls</h3>
+                    <div class="eccm-grid">
+                        <div class="eccm-item">
+                            <label class="toggle">
+                                <input type="checkbox" id="freqAgilityToggle">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Freq Agility</span>
+                            </label>
+                        </div>
+                        <div class="eccm-item">
+                            <label class="toggle">
+                                <input type="checkbox" id="mtiToggle">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">MTI</span>
+                            </label>
+                        </div>
+                        <div class="eccm-item">
+                            <label class="toggle">
+                                <input type="checkbox" id="sloBlankingToggle">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">SLO Blank</span>
+                            </label>
+                        </div>
+                        <div class="eccm-item slider-item">
+                            <label>STC</label>
+                            <input type="range" id="stcSlider" min="0" max="100" value="50">
+                            <span id="stcValue">50%</span>
+                        </div>
+                        <div class="eccm-item slider-item">
+                            <label>FTC</label>
+                            <input type="range" id="ftcSlider" min="0" max="100" value="30">
+                            <span id="ftcValue">30%</span>
+                        </div>
+                        <div class="eccm-item slider-item">
+                            <label>Gain</label>
+                            <input type="range" id="gainSlider" min="0" max="100" value="70">
+                            <span id="gainValue">70%</span>
+                        </div>
+                    </div>
+                    <div class="ecm-status" id="ecmStatusPanel">
+                        <div class="ecm-indicator">
+                            <span class="ecm-label">JAMMING:</span>
+                            <span class="ecm-value" id="jammingStatus">NONE</span>
+                        </div>
+                        <div class="ecm-indicator">
+                            <span class="ecm-label">J/S Ratio:</span>
+                            <span class="ecm-value" id="jsRatio">--- dB</span>
+                        </div>
+                        <div class="ecm-indicator">
+                            <span class="ecm-label">Burn-through:</span>
+                            <span class="ecm-value" id="burnThrough">--- km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IFF Panel -->
+                <div class="iff-panel">
+                    <h3>IFF Interrogator</h3>
+                    <div class="iff-controls">
+                        <div class="iff-mode-selector">
+                            <label>Mode:</label>
+                            <select id="iffModeSelect">
+                                <option value="0">OFF</option>
+                                <option value="1">Mode 1</option>
+                                <option value="2">Mode 2</option>
+                                <option value="3">Mode 3/A</option>
+                                <option value="4">Mode C</option>
+                                <option value="5">Mode 4</option>
+                            </select>
+                        </div>
+                        <button id="btnIffInterrogate" class="btn btn-small">INTERR</button>
+                    </div>
+                    <div class="iff-response" id="iffResponse">
+                        <span class="iff-status">---</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Right Column - Firing Solution & Missiles -->
@@ -325,7 +404,29 @@
                         <span class="label">In Flight:</span>
                         <span class="value" id="missilesInFlight">0</span>
                     </div>
-                    <div class="missile-status-list" id="missileStatusList">
+                    <div class="active-missiles" id="activeMissiles">
+                        <!-- Active missile tracking entries will be added dynamically -->
+                    </div>
+                </section>
+
+                <!-- Kill Assessment -->
+                <section class="kill-assessment-panel">
+                    <h3>Kill Assessment</h3>
+                    <div class="kill-assessment-display" id="killAssessmentDisplay">
+                        <div class="assessment-status" id="assessmentStatus">---</div>
+                        <div class="assessment-details" id="assessmentDetails">
+                            <div class="detail-row">
+                                <span class="detail-label">Last Engagement:</span>
+                                <span class="detail-value" id="lastEngResult">---</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Miss Distance:</span>
+                                <span class="detail-value" id="missDistance">---</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kill-history" id="killHistory">
+                        <!-- Kill/miss history entries -->
                     </div>
                 </section>
 

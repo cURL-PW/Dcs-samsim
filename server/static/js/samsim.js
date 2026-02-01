@@ -21,6 +21,18 @@ class SAMSimClient {
         // Contact history for afterglow effect
         this.contactHistory = [];
 
+        // ECM/EW data
+        this.jammingData = [];
+        this.chaffClouds = [];
+        this.iffResponses = {};
+
+        // Active missiles tracking
+        this.activeMissiles = [];
+        this.missileTrails = {};
+
+        // Kill assessment history
+        this.killHistory = [];
+
         // System configurations
         this.systemConfigs = {
             SA2: {
@@ -191,6 +203,28 @@ class SAMSimClient {
         document.getElementById('initSiteBtn')?.addEventListener('click', () => this.showInitSiteModal());
         document.getElementById('confirmInitSite')?.addEventListener('click', () => this.initializeSite());
         document.getElementById('cancelInitSite')?.addEventListener('click', () => this.hideInitSiteModal());
+
+        // ECCM controls
+        document.getElementById('freqAgilityToggle')?.addEventListener('change', (e) => this.sendECCMSetting('freqAgility', e.target.checked));
+        document.getElementById('mtiToggle')?.addEventListener('change', (e) => this.sendECCMSetting('mti', e.target.checked));
+        document.getElementById('sloBlankingToggle')?.addEventListener('change', (e) => this.sendECCMSetting('sloBlanking', e.target.checked));
+
+        document.getElementById('stcSlider')?.addEventListener('input', (e) => {
+            document.getElementById('stcValue').textContent = `${e.target.value}%`;
+            this.sendECCMSetting('stc', parseInt(e.target.value));
+        });
+        document.getElementById('ftcSlider')?.addEventListener('input', (e) => {
+            document.getElementById('ftcValue').textContent = `${e.target.value}%`;
+            this.sendECCMSetting('ftc', parseInt(e.target.value));
+        });
+        document.getElementById('gainSlider')?.addEventListener('input', (e) => {
+            document.getElementById('gainValue').textContent = `${e.target.value}%`;
+            this.sendECCMSetting('gain', parseInt(e.target.value));
+        });
+
+        // IFF controls
+        document.getElementById('btnIffInterrogate')?.addEventListener('click', () => this.interrogateIFF());
+        document.getElementById('iffModeSelect')?.addEventListener('change', (e) => this.sendIFFMode(parseInt(e.target.value)));
     }
 
     selectSystem(systemType) {
@@ -317,15 +351,89 @@ class SAMSimClient {
             } else {
                 this.log(data.message, 'error');
             }
+        } else if (data.type === 'ecm_update') {
+            this.handleECMUpdate(data);
+        } else if (data.type === 'missile_update') {
+            this.handleMissileUpdate(data);
+        } else if (data.type === 'kill_assessment') {
+            this.handleKillAssessment(data);
+        } else if (data.type === 'iff_response') {
+            this.handleIFFResponse(data);
         } else if (data.systemType) {
             // Direct state update
             this.state = data;
             this.currentSystem = data.systemType;
+
+            // Extract ECM/EW data if present
+            if (data.jamming) this.jammingData = data.jamming;
+            if (data.chaff) this.chaffClouds = data.chaff;
+            if (data.missiles) this.activeMissiles = data.missiles.active || [];
+            if (data.iffResponses) this.iffResponses = data.iffResponses;
+
             this.updateDisplay();
         }
 
         this.updateCount++;
         this.updateRate();
+    }
+
+    handleECMUpdate(data) {
+        if (data.jamming) {
+            this.jammingData = data.jamming;
+            this.updateECMDisplay();
+        }
+        if (data.chaff) {
+            this.chaffClouds = data.chaff;
+        }
+    }
+
+    handleMissileUpdate(data) {
+        if (data.missiles) {
+            this.activeMissiles = data.missiles;
+            // Update missile trails
+            data.missiles.forEach(m => {
+                if (!this.missileTrails[m.id]) {
+                    this.missileTrails[m.id] = [];
+                }
+                this.missileTrails[m.id].push({x: m.x, y: m.y, z: m.z});
+                // Keep only last 50 points
+                if (this.missileTrails[m.id].length > 50) {
+                    this.missileTrails[m.id].shift();
+                }
+            });
+            this.updateActiveMissilesDisplay();
+        }
+    }
+
+    handleKillAssessment(data) {
+        const result = data.result;
+        this.killHistory.unshift({
+            time: new Date().toLocaleTimeString(),
+            targetId: data.targetId,
+            result: result,
+            missDistance: data.missDistance
+        });
+        // Keep last 10 entries
+        if (this.killHistory.length > 10) {
+            this.killHistory.pop();
+        }
+        this.updateKillAssessmentDisplay(data);
+
+        // Log the result
+        if (result === 'KILL') {
+            this.log(`TARGET DESTROYED - ID: ${data.targetId}`, 'success');
+        } else {
+            this.log(`MISS - Distance: ${data.missDistance?.toFixed(0) || '?'}m`, 'warning');
+        }
+    }
+
+    handleIFFResponse(data) {
+        this.iffResponses[data.targetId] = {
+            status: data.status,
+            code: data.code,
+            mode: data.mode
+        };
+        this.updateIFFDisplay(data);
     }
 
     updateDisplay() {
@@ -644,6 +752,91 @@ class SAMSimClient {
                 indicators.appendChild(indicator);
             }
         }
+
+        // Update active missiles display
+        this.updateActiveMissilesDisplay();
+    }
+
+    updateECMDisplay() {
+        const jammingStatus = document.getElementById('jammingStatus');
+        const jsRatio = document.getElementById('jsRatio');
+        const burnThrough = document.getElementById('burnThrough');
+
+        if (this.jammingData && this.jammingData.length > 0) {
+            // Find strongest jammer
+            const strongestJammer = this.jammingData.reduce((prev, curr) =>
+                (curr.jsRatio > (prev?.jsRatio || 0)) ? curr : prev, null);
+
+            if (strongestJammer) {
+                jammingStatus.textContent = strongestJammer.type.replace('_', ' ');
+                jammingStatus.classList.add('jamming-detected');
+                jsRatio.textContent = `${strongestJammer.jsRatio?.toFixed(1) || '?'} dB`;
+                burnThrough.textContent = strongestJammer.burnThroughRange ?
+                    `${(strongestJammer.burnThroughRange / 1000).toFixed(1)} km` : '---';
+            }
+        } else {
+            jammingStatus.textContent = 'NONE';
+            jammingStatus.classList.remove('jamming-detected');
+            jsRatio.textContent = '--- dB';
+            burnThrough.textContent = '--- km';
+        }
+    }
+
+    updateActiveMissilesDisplay() {
+        const container = document.getElementById('activeMissiles');
+        if (!container) return;
+
+        if (!this.activeMissiles || this.activeMissiles.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = this.activeMissiles.map(m => {
+            const phaseClass = m.phase?.toLowerCase() || 'boost';
+            return `
+                <div class="active-missile-item ${phaseClass}">
+                    <span class="missile-id">M${m.id}</span>
+                    <span class="missile-phase">${m.phase || 'BOOST'}</span>
+                    <span class="missile-info">${(m.range / 1000).toFixed(1)} km</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateKillAssessmentDisplay(data) {
+        const statusEl = document.getElementById('assessmentStatus');
+        const resultEl = document.getElementById('lastEngResult');
+        const missDistEl = document.getElementById('missDistance');
+        const historyEl = document.getElementById('killHistory');
+
+        if (data) {
+            statusEl.textContent = data.result;
+            statusEl.className = 'assessment-status ' + (data.result === 'KILL' ? 'kill' : 'miss');
+            resultEl.textContent = data.result;
+            missDistEl.textContent = data.missDistance ? `${data.missDistance.toFixed(0)} m` : '---';
+        }
+
+        // Update history
+        if (historyEl) {
+            historyEl.innerHTML = this.killHistory.map(entry => `
+                <div class="kill-history-item ${entry.result.toLowerCase()}">
+                    <span>${entry.time}</span>
+                    <span>TGT #${entry.targetId}</span>
+                    <span>${entry.result}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    updateIFFDisplay(data) {
+        const responseEl = document.getElementById('iffResponse');
+        if (!responseEl) return;
+
+        const statusClass = data.status?.toLowerCase() || 'unknown';
+        responseEl.innerHTML = `
+            <span class="iff-status ${statusClass}">${data.status || 'NO RESPONSE'}</span>
+            ${data.code ? `<span class="iff-code">Code: ${data.code}</span>` : ''}
+        `;
     }
 
     updateIndicator(id, active) {
@@ -780,6 +973,190 @@ class SAMSimClient {
                 }
             }
         }
+
+        // Draw jamming strobes
+        this.drawJammingStrobes(ctx, cx, cy, radius);
+
+        // Draw chaff clouds
+        this.drawChaffClouds(ctx, cx, cy, radius, this.ewRange);
+
+        // Draw IFF markers
+        this.drawIFFMarkers(ctx, cx, cy, radius, this.ewRange);
+
+        // Draw active missiles
+        this.drawMissiles(ctx, cx, cy, radius, this.ewRange);
+    }
+
+    drawJammingStrobes(ctx, cx, cy, radius) {
+        if (!this.jammingData || this.jammingData.length === 0) return;
+
+        this.jammingData.forEach(jammer => {
+            if (jammer.type === 'NOISE_BARRAGE' || jammer.type === 'NOISE_SPOT') {
+                // Draw noise strobe
+                const azRad = (jammer.azimuth - 90) * Math.PI / 180;
+                const width = jammer.type === 'NOISE_BARRAGE' ? 0.5 : 0.15; // radians
+
+                // Intensity based on J/S ratio
+                const intensity = Math.min(1, jammer.jsRatio / 20);
+                const alpha = 0.3 + intensity * 0.5;
+
+                ctx.fillStyle = `rgba(255, 100, 100, ${alpha})`;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, radius, azRad - width/2, azRad + width/2);
+                ctx.closePath();
+                ctx.fill();
+
+                // Strobe line
+                ctx.strokeStyle = `rgba(255, 50, 50, ${alpha + 0.2})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(azRad) * radius, cy + Math.sin(azRad) * radius);
+                ctx.stroke();
+            } else if (jammer.type === 'DECEPTIVE_RANGE' || jammer.type === 'DRFM') {
+                // Draw false target blips
+                const azRad = (jammer.azimuth - 90) * Math.PI / 180;
+                for (let i = 0; i < 3; i++) {
+                    const falseRange = (0.3 + Math.random() * 0.5) * radius;
+                    const x = cx + Math.cos(azRad) * falseRange;
+                    const y = cy + Math.sin(azRad) * falseRange;
+
+                    ctx.fillStyle = 'rgba(255, 150, 0, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        });
+    }
+
+    drawChaffClouds(ctx, cx, cy, radius, rangeKm) {
+        if (!this.chaffClouds || this.chaffClouds.length === 0) return;
+
+        this.chaffClouds.forEach(cloud => {
+            const range = cloud.range / 1000;
+            if (range > rangeKm) return;
+
+            const normalizedRange = range / rangeKm;
+            const azRad = (cloud.azimuth - 90) * Math.PI / 180;
+            const x = cx + Math.cos(azRad) * radius * normalizedRange;
+            const y = cy + Math.sin(azRad) * radius * normalizedRange;
+
+            // Cloud size based on bloom factor
+            const cloudSize = 5 + cloud.bloom * 15;
+            const alpha = cloud.strength * 0.6;
+
+            // Draw scattered returns
+            ctx.fillStyle = `rgba(255, 180, 0, ${alpha})`;
+            for (let i = 0; i < 8; i++) {
+                const offsetX = (Math.random() - 0.5) * cloudSize;
+                const offsetY = (Math.random() - 0.5) * cloudSize;
+                ctx.beginPath();
+                ctx.arc(x + offsetX, y + offsetY, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+
+    drawIFFMarkers(ctx, cx, cy, radius, rangeKm) {
+        if (!this.state?.contacts) return;
+
+        this.state.contacts.forEach(contact => {
+            const range = contact.range / 1000;
+            if (range > rangeKm) return;
+
+            const iffData = this.iffResponses[contact.id];
+            if (!iffData) return;
+
+            const normalizedRange = range / rangeKm;
+            const azRad = (contact.azimuth - 90) * Math.PI / 180;
+            const x = cx + Math.cos(azRad) * radius * normalizedRange;
+            const y = cy + Math.sin(azRad) * radius * normalizedRange;
+
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+
+            if (iffData.status === 'FRIENDLY') {
+                ctx.fillStyle = '#00aaff';
+                ctx.fillText('F', x, y - 8);
+                // Draw friendly box
+                ctx.strokeStyle = '#00aaff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x - 6, y - 6, 12, 12);
+            } else if (iffData.status === 'HOSTILE') {
+                ctx.fillStyle = '#ff3333';
+                ctx.fillText('H', x, y - 8);
+                // Draw hostile diamond
+                ctx.strokeStyle = '#ff3333';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, y - 8);
+                ctx.lineTo(x + 6, y);
+                ctx.lineTo(x, y + 8);
+                ctx.lineTo(x - 6, y);
+                ctx.closePath();
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = '#ffff00';
+                ctx.fillText('?', x, y - 8);
+            }
+        });
+    }
+
+    drawMissiles(ctx, cx, cy, radius, rangeKm) {
+        if (!this.activeMissiles || this.activeMissiles.length === 0) return;
+
+        this.activeMissiles.forEach(missile => {
+            const range = missile.range / 1000;
+            if (range > rangeKm) return;
+
+            const normalizedRange = range / rangeKm;
+            const azRad = (missile.azimuth - 90) * Math.PI / 180;
+            const x = cx + Math.cos(azRad) * radius * normalizedRange;
+            const y = cy + Math.sin(azRad) * radius * normalizedRange;
+
+            // Draw missile trail
+            const trail = this.missileTrails[missile.id];
+            if (trail && trail.length > 1) {
+                ctx.strokeStyle = 'rgba(255, 100, 0, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                trail.forEach((point, idx) => {
+                    const pRange = point.range / 1000 / rangeKm;
+                    const pAz = (point.azimuth - 90) * Math.PI / 180;
+                    const px = cx + Math.cos(pAz) * radius * pRange;
+                    const py = cy + Math.sin(pAz) * radius * pRange;
+                    if (idx === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+            }
+
+            // Draw missile symbol
+            const phase = missile.phase || 'BOOST';
+            if (phase === 'BOOST') {
+                ctx.fillStyle = '#ff8800';
+            } else if (phase === 'TERMINAL') {
+                ctx.fillStyle = '#ff0000';
+            } else {
+                ctx.fillStyle = '#ffaa00';
+            }
+
+            // Triangle symbol for missile
+            ctx.beginPath();
+            ctx.moveTo(x, y - 5);
+            ctx.lineTo(x - 4, y + 4);
+            ctx.lineTo(x + 4, y + 4);
+            ctx.closePath();
+            ctx.fill();
+
+            // Missile ID
+            ctx.fillStyle = '#ff8800';
+            ctx.font = '8px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(`M${missile.id}`, x + 6, y);
+        });
     }
 
     drawFCRadar() {
@@ -868,6 +1245,12 @@ class SAMSimClient {
             const rangeKm = Math.round(this.fcRange * i / 4);
             ctx.fillText(`${rangeKm}`, cx + 5, cy - radius * i / 4 + 12);
         }
+
+        // Draw jamming strobes on FC radar
+        this.drawJammingStrobes(ctx, cx, cy, radius);
+
+        // Draw active missiles on FC radar
+        this.drawMissiles(ctx, cx, cy, radius, this.fcRange);
     }
 
     drawAScope() {
@@ -910,20 +1293,31 @@ class SAMSimClient {
         ctx.lineTo(w, h - 10);
         ctx.stroke();
 
+        // Calculate jamming noise level
+        let jammingNoise = 0;
+        if (this.jammingData && this.jammingData.length > 0) {
+            const strongestJammer = this.jammingData.reduce((prev, curr) =>
+                (curr.jsRatio > (prev?.jsRatio || 0)) ? curr : prev, null);
+            if (strongestJammer) {
+                jammingNoise = Math.min(30, strongestJammer.jsRatio * 2);
+            }
+        }
+
         // Draw target return if tracking
         const track = this.state?.track;
         if (track && track.valid) {
             const normalizedRange = (track.range / 1000) / this.fcRange;
             const x = normalizedRange * w;
 
-            // Draw return pulse with noise
+            // Draw return pulse with noise (increased by jamming)
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
             ctx.beginPath();
 
             for (let i = 0; i < w; i++) {
-                const noise = Math.random() * 8 - 4;
-                let signal = noise;
+                const baseNoise = Math.random() * 8 - 4;
+                const jamNoise = jammingNoise > 0 ? (Math.random() * jammingNoise - jammingNoise/2) : 0;
+                let signal = baseNoise + jamNoise;
 
                 // Add target return
                 const distFromTarget = Math.abs(i - x);
@@ -932,11 +1326,11 @@ class SAMSimClient {
                     signal += strength;
                 }
 
-                const y = h - 10 - Math.abs(signal);
+                const yPos = h - 10 - Math.abs(signal);
                 if (i === 0) {
-                    ctx.moveTo(i, y);
+                    ctx.moveTo(i, yPos);
                 } else {
-                    ctx.lineTo(i, y);
+                    ctx.lineTo(i, yPos);
                 }
             }
             ctx.stroke();
@@ -950,6 +1344,18 @@ class SAMSimClient {
             ctx.lineTo(x, h);
             ctx.stroke();
             ctx.setLineDash([]);
+        } else if (jammingNoise > 0) {
+            // Show jamming noise even without track
+            ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i < w; i++) {
+                const noise = Math.random() * jammingNoise - jammingNoise/2;
+                const yPos = h - 10 - Math.abs(noise);
+                if (i === 0) ctx.moveTo(i, yPos);
+                else ctx.lineTo(i, yPos);
+            }
+            ctx.stroke();
         }
     }
 
@@ -1092,6 +1498,35 @@ class SAMSimClient {
 
     launchMissile() {
         this.sendCommand({ type: 'LAUNCH' });
+    }
+
+    sendECCMSetting(setting, value) {
+        this.sendCommand({
+            type: 'ECCM_SETTING',
+            setting: setting,
+            value: value
+        });
+    }
+
+    sendIFFMode(mode) {
+        this.sendCommand({
+            type: 'IFF_MODE',
+            mode: mode
+        });
+    }
+
+    interrogateIFF() {
+        if (this.selectedTarget) {
+            const mode = parseInt(document.getElementById('iffModeSelect')?.value) || 3;
+            this.sendCommand({
+                type: 'IFF_INTERROGATE',
+                targetId: this.selectedTarget,
+                mode: mode
+            });
+            this.log(`IFF interrogation - Target #${this.selectedTarget}, Mode ${mode}`, 'info');
+        } else {
+            this.log('Select a target for IFF interrogation', 'warning');
+        }
     }
 
     // UI helpers
