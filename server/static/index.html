@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SA-2 SAMSIM - DCS World</title>
+    <title>Eastern SAM Simulator - DCS World</title>
     <link rel="stylesheet" href="css/samsim.css">
 </head>
 <body>
@@ -11,12 +11,22 @@
         <!-- Header -->
         <header class="header">
             <div class="header-left">
-                <h1>SA-2 (S-75 Dvina) SAMSim</h1>
-                <span class="subtitle">Enhanced Radar Simulation</span>
+                <h1 id="systemTitle">SAM Simulator</h1>
+                <span class="subtitle" id="systemSubtitle">Select a SAM System</span>
             </div>
             <div class="header-center">
+                <div class="system-selector-header">
+                    <select id="samSystemSelect" class="sam-select">
+                        <option value="">-- Select System --</option>
+                        <option value="SA2">SA-2 Guideline (S-75)</option>
+                        <option value="SA3">SA-3 Goa (S-125)</option>
+                        <option value="SA6">SA-6 Gainful (2K12 Kub)</option>
+                        <option value="SA10">SA-10 Grumble (S-300PS)</option>
+                        <option value="SA11">SA-11 Gadfly (9K37 Buk)</option>
+                    </select>
+                </div>
                 <div class="system-state" id="systemStateDisplay">
-                    <span class="state-label">SYSTEM:</span>
+                    <span class="state-label">STATUS:</span>
                     <span class="state-value" id="systemState">OFFLINE</span>
                 </div>
             </div>
@@ -33,48 +43,51 @@
         <main class="main-content-enhanced">
             <!-- Left Column - Radar Displays -->
             <div class="radar-column">
-                <!-- P-19 Early Warning Radar -->
-                <section class="radar-panel p19-panel">
+                <!-- Early Warning / Search Radar -->
+                <section class="radar-panel ew-panel">
                     <div class="panel-header">
-                        <span class="panel-title">P-19 "Flat Face" Early Warning</span>
-                        <div class="radar-mode" id="p19ModeDisplay">OFF</div>
+                        <span class="panel-title" id="ewRadarTitle">Search Radar</span>
+                        <div class="radar-mode" id="ewModeDisplay">OFF</div>
                     </div>
-                    <div class="radar-container p19-container">
-                        <canvas id="p19Scope" width="400" height="400"></canvas>
+                    <div class="radar-container ew-container">
+                        <canvas id="ewScope" width="400" height="400"></canvas>
                     </div>
                     <div class="radar-controls compact">
                         <div class="control-group">
                             <label>Mode</label>
-                            <select id="p19Mode">
+                            <select id="ewMode">
                                 <option value="0">OFF</option>
                                 <option value="1">STANDBY</option>
-                                <option value="2">ROTATE</option>
+                                <option value="2">SEARCH</option>
                                 <option value="3">SECTOR</option>
                             </select>
                         </div>
                         <div class="control-group">
                             <label>Range</label>
-                            <select id="p19Range">
-                                <option value="80">80 km</option>
-                                <option value="160" selected>160 km</option>
+                            <select id="ewRange">
+                                <option value="50">50 km</option>
+                                <option value="100">100 km</option>
+                                <option value="150">150 km</option>
+                                <option value="200">200 km</option>
+                                <option value="300">300 km</option>
                             </select>
                         </div>
-                        <div class="p19-antenna-display">
-                            <span>Antenna: </span>
-                            <span id="p19AntennaAz">0</span>°
+                        <div class="ew-antenna-display">
+                            <span>Ant: </span>
+                            <span id="ewAntennaAz">0</span>°
                         </div>
                     </div>
                 </section>
 
-                <!-- SNR-75 Fire Control Radar -->
-                <section class="radar-panel snr75-panel">
+                <!-- Fire Control / Track Radar -->
+                <section class="radar-panel fc-panel">
                     <div class="panel-header">
-                        <span class="panel-title">SNR-75 "Fan Song" Fire Control</span>
-                        <div class="radar-mode" id="snr75ModeDisplay">OFF</div>
+                        <span class="panel-title" id="fcRadarTitle">Fire Control Radar</span>
+                        <div class="radar-mode" id="fcModeDisplay">OFF</div>
                     </div>
-                    <div class="snr75-displays">
+                    <div class="fc-displays">
                         <div class="ppi-display">
-                            <canvas id="snr75Scope" width="350" height="350"></canvas>
+                            <canvas id="fcScope" width="350" height="350"></canvas>
                         </div>
                         <div class="scope-displays">
                             <!-- A-Scope (Range) -->
@@ -92,29 +105,31 @@
                     <div class="radar-controls compact">
                         <div class="control-group">
                             <label>Mode</label>
-                            <select id="snr75Mode">
+                            <select id="fcMode">
                                 <option value="0">OFF</option>
                                 <option value="1">STANDBY</option>
                                 <option value="2">ACQUISITION</option>
-                                <option value="3">TRACK COARSE</option>
-                                <option value="4">TRACK FINE</option>
+                                <option value="3">TRACK</option>
+                                <option value="4">GUIDANCE</option>
                             </select>
                         </div>
                         <div class="control-group">
                             <label>Range</label>
-                            <select id="snr75Range">
+                            <select id="fcRange">
                                 <option value="30">30 km</option>
-                                <option value="65" selected>65 km</option>
+                                <option value="50">50 km</option>
+                                <option value="65">65 km</option>
+                                <option value="100">100 km</option>
                             </select>
                         </div>
                         <div class="antenna-controls">
                             <div class="control-group small">
                                 <label>Az</label>
-                                <input type="number" id="snr75Az" min="0" max="360" value="0" step="1">
+                                <input type="number" id="fcAz" min="0" max="360" value="0" step="1">
                             </div>
                             <div class="control-group small">
                                 <label>El</label>
-                                <input type="number" id="snr75El" min="0" max="85" value="5" step="1">
+                                <input type="number" id="fcEl" min="0" max="85" value="5" step="1">
                             </div>
                             <button id="btnCommandAntenna" class="btn btn-small">CMD</button>
                         </div>
@@ -140,18 +155,18 @@
                         <button id="btnPowerOn" class="btn btn-power">STARTUP</button>
                         <button id="btnPowerOff" class="btn btn-standby">SHUTDOWN</button>
                     </div>
-                    <div class="indicator-row">
+                    <div class="indicator-row" id="indicatorRow">
                         <div class="indicator" id="indPower">
                             <span class="indicator-light"></span>
                             <span class="indicator-label">PWR</span>
                         </div>
-                        <div class="indicator" id="indP19">
+                        <div class="indicator" id="indEW">
                             <span class="indicator-light"></span>
-                            <span class="indicator-label">P-19</span>
+                            <span class="indicator-label">EW</span>
                         </div>
-                        <div class="indicator" id="indSNR">
+                        <div class="indicator" id="indFC">
                             <span class="indicator-light"></span>
-                            <span class="indicator-label">SNR</span>
+                            <span class="indicator-label">FC</span>
                         </div>
                         <div class="indicator" id="indTrack">
                             <span class="indicator-light"></span>
@@ -164,9 +179,16 @@
                     </div>
                 </div>
 
+                <!-- Multi-Channel Display (for SA-10/SA-11) -->
+                <div class="channel-panel" id="channelPanel" style="display:none;">
+                    <h3>Engagement Channels</h3>
+                    <div class="channel-grid" id="channelGrid">
+                    </div>
+                </div>
+
                 <!-- EW Target List -->
                 <div class="target-list-container">
-                    <h3>EW Radar Tracks (P-19)</h3>
+                    <h3 id="ewTargetListTitle">Search Radar Tracks</h3>
                     <div class="target-list" id="ewTargetList">
                         <div class="no-targets">No tracks</div>
                     </div>
@@ -174,7 +196,7 @@
 
                 <!-- Tracked Target Info -->
                 <div class="tracked-target" id="trackedTargetPanel">
-                    <h3>Fire Control Track (SNR-75)</h3>
+                    <h3 id="fcTrackTitle">Fire Control Track</h3>
                     <div class="target-data" id="trackedTargetData">
                         <div class="data-grid">
                             <div class="data-cell">
@@ -243,18 +265,6 @@
                             <span class="toggle-label">Weapons Free</span>
                         </label>
                     </div>
-                    <div class="toggle-row">
-                        <label class="toggle">
-                            <input type="checkbox" id="autoEngToggle">
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Auto Engage</span>
-                        </label>
-                        <label class="toggle">
-                            <input type="checkbox" id="burstModeToggle">
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Burst (2 MSL)</span>
-                        </label>
-                    </div>
                 </div>
             </div>
 
@@ -283,12 +293,12 @@
                                 <span class="solution-value" id="timeToIntercept">--- sec</span>
                             </div>
                             <div class="solution-row">
-                                <span class="solution-label">Lead Angle:</span>
-                                <span class="solution-value" id="leadAngle">---°</span>
+                                <span class="solution-label">Missile Range:</span>
+                                <span class="solution-value" id="missileRange">---</span>
                             </div>
                             <div class="solution-row">
-                                <span class="solution-label">Missile TOF:</span>
-                                <span class="solution-value" id="missileTOF">--- sec</span>
+                                <span class="solution-label">Min Range:</span>
+                                <span class="solution-value" id="minRange">---</span>
                             </div>
                         </div>
                     </div>
@@ -302,11 +312,11 @@
 
                 <!-- Missile Status -->
                 <section class="missile-panel">
-                    <h3>V-750 Missile Battery</h3>
+                    <h3 id="missileTitle">Missiles</h3>
                     <div class="missile-display">
                         <div class="missile-count">
-                            <span class="missile-number" id="missilesReady">6</span>
-                            <span class="missile-label">/ 6 Ready</span>
+                            <span class="missile-number" id="missilesReady">0</span>
+                            <span class="missile-label" id="missilesTotal">/ 0 Ready</span>
                         </div>
                         <div class="missile-indicators" id="missileIndicators">
                         </div>
@@ -331,6 +341,10 @@
         <!-- Footer / Status Bar -->
         <footer class="status-bar">
             <div class="status-item">
+                <span class="label">System:</span>
+                <span class="value" id="currentSystem">None</span>
+            </div>
+            <div class="status-item">
                 <span class="label">WebSocket:</span>
                 <span class="value" id="wsStatus">Disconnected</span>
             </div>
@@ -352,10 +366,20 @@
     <!-- Init Site Modal -->
     <div class="modal" id="initSiteModal">
         <div class="modal-content">
-            <h2>Initialize SA-2 Site</h2>
+            <h2>Initialize SAM Site</h2>
+            <div class="form-group">
+                <label for="modalSystemSelect">System Type:</label>
+                <select id="modalSystemSelect">
+                    <option value="SA2">SA-2 Guideline</option>
+                    <option value="SA3">SA-3 Goa</option>
+                    <option value="SA6">SA-6 Gainful</option>
+                    <option value="SA10">SA-10 Grumble</option>
+                    <option value="SA11">SA-11 Gadfly</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label for="newSiteId">Site ID:</label>
-                <input type="text" id="newSiteId" placeholder="e.g., SA2-ALPHA">
+                <input type="text" id="newSiteId" placeholder="e.g., ALPHA">
             </div>
             <div class="form-group">
                 <label for="groupName">DCS Group Name:</label>

@@ -961,3 +961,178 @@ body {
         flex-direction: column;
     }
 }
+
+/* SAM System Selector */
+.system-selector-header {
+    margin-right: 15px;
+}
+
+.sam-select {
+    background-color: var(--bg-control);
+    color: var(--text-primary);
+    border: 1px solid var(--text-dim);
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+    min-width: 200px;
+}
+
+.sam-select:hover {
+    border-color: var(--text-secondary);
+}
+
+.sam-select:focus {
+    outline: none;
+    border-color: var(--text-primary);
+}
+
+/* Channel Panel (SA-10/SA-11) */
+.channel-panel {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--text-dim);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.channel-panel h3 {
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.channel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 6px;
+}
+
+.channel-item {
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    border-radius: 3px;
+    padding: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.channel-item:hover {
+    border-color: var(--text-secondary);
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.channel-item.selected {
+    border-color: var(--text-primary);
+    background-color: rgba(0, 255, 0, 0.15);
+}
+
+.channel-item.tracking {
+    border-color: var(--accent-yellow);
+}
+
+.channel-item.guidance {
+    border-color: var(--accent-red);
+    animation: pulse-red 1s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { border-color: var(--accent-red); }
+    50% { border-color: #ff6666; }
+}
+
+.channel-num {
+    font-size: 0.7em;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+}
+
+.channel-status {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+.channel-status.active {
+    color: var(--text-primary);
+}
+
+.channel-target {
+    font-size: 0.8em;
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+/* EW/FC Panel Generic Names */
+.ew-panel, .fc-panel {
+    /* Same as p19-panel and snr75-panel */
+}
+
+.ew-container {
+    /* Same as p19-container */
+}
+
+.fc-displays {
+    display: flex;
+    gap: 10px;
+}
+
+.fc-displays .ppi-display {
+    flex: 0 0 350px;
+}
+
+.fc-displays .scope-displays {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Form group select */
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+/* EW Antenna Display */
+.ew-antenna-display {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    background-color: var(--bg-control);
+    border-radius: 3px;
+}
+
+/* Log entries */
+.log-entry {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--radar-dim);
+    font-size: 0.8em;
+}
+
+.log-entry.log-info {
+    color: var(--text-secondary);
+}
+
+.log-entry.log-success {
+    color: var(--text-primary);
+}
+
+.log-entry.log-warning {
+    color: var(--accent-yellow);
+}
+
+.log-entry.log-error {
+    color: var(--accent-red);
+}
+
+.log-time {
+    color: var(--text-dim);
+    margin-right: 8px;
+}
