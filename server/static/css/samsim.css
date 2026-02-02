@@ -1466,3 +1466,183 @@ body {
     stroke-width: 2;
     fill: none;
 }
+
+/* C2 Command Bar */
+.c2-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 6px 12px;
+    margin-bottom: 8px;
+}
+
+.c2-bar-left,
+.c2-bar-center,
+.c2-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.c2-label {
+    color: var(--text-secondary);
+    font-size: 0.8em;
+}
+
+.c2-value {
+    color: var(--text-primary);
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.c2-value.active {
+    color: var(--accent-green);
+}
+
+.c2-policy {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.c2-policy label {
+    color: var(--text-secondary);
+    font-size: 0.75em;
+}
+
+.c2-select {
+    padding: 3px 6px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    color: var(--text-primary);
+    font-size: 0.75em;
+    font-family: inherit;
+}
+
+.c2-toggle {
+    font-size: 0.8em;
+}
+
+.c2-sites {
+    display: flex;
+    gap: 8px;
+}
+
+.c2-site-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 8px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+    min-width: 50px;
+}
+
+.c2-site-indicator.active {
+    border-color: var(--accent-green);
+}
+
+.c2-site-indicator.engaging {
+    border-color: var(--accent-red);
+    animation: pulse-red 1s infinite;
+}
+
+.c2-site-name {
+    font-size: 0.7em;
+    color: var(--text-secondary);
+}
+
+.c2-site-status {
+    font-size: 0.65em;
+    color: var(--text-primary);
+}
+
+.c2-tracks-label {
+    color: var(--text-secondary);
+    font-size: 0.75em;
+}
+
+.c2-tracks-count {
+    color: var(--text-primary);
+    font-weight: bold;
+    font-size: 1em;
+    padding: 2px 8px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+}
+
+/* Terrain Effects Panel */
+.terrain-panel {
+    background-color: var(--bg-panel);
+    border: 2px solid var(--text-dim);
+    padding: 8px;
+    margin-top: 8px;
+}
+
+.terrain-panel h3 {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.terrain-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.terrain-status {
+    margin-top: 8px;
+    padding: 6px;
+    background-color: var(--bg-control);
+    border: 1px solid var(--text-dim);
+}
+
+.terrain-indicator {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    font-size: 0.8em;
+}
+
+.terrain-label {
+    color: var(--text-secondary);
+}
+
+.terrain-value {
+    color: var(--text-primary);
+}
+
+.terrain-value.warning {
+    color: var(--accent-yellow);
+}
+
+.terrain-value.alert {
+    color: var(--accent-red);
+}
+
+/* Terrain masked contact styling on radar */
+.contact-masked {
+    opacity: 0.3;
+}
+
+/* Clutter display on radar */
+.clutter-ring {
+    fill: none;
+    stroke: rgba(0, 100, 0, 0.3);
+}
+
+/* C2 Fused Track styling */
+.fused-track {
+    stroke: var(--accent-blue);
+    stroke-width: 2;
+}
+
+/* Threat level colors */
+.threat-critical { color: var(--accent-red); }
+.threat-high { color: var(--accent-orange); }
+.threat-medium { color: var(--accent-yellow); }
+.threat-low { color: var(--text-primary); }

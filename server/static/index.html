@@ -39,6 +39,37 @@
             </div>
         </header>
 
+        <!-- C2 Command Bar -->
+        <div class="c2-bar" id="c2Bar">
+            <div class="c2-bar-left">
+                <span class="c2-label">C2 STATUS:</span>
+                <span class="c2-value" id="c2Status">OFFLINE</span>
+                <div class="c2-policy">
+                    <label>Policy:</label>
+                    <select id="engagementPolicy" class="c2-select">
+                        <option value="WEAPONS_HOLD">WEAPONS HOLD</option>
+                        <option value="WEAPONS_TIGHT">WEAPONS TIGHT</option>
+                        <option value="WEAPONS_FREE">WEAPONS FREE</option>
+                    </select>
+                </div>
+                <label class="toggle c2-toggle">
+                    <input type="checkbox" id="autoAssignToggle">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Auto Assign</span>
+                </label>
+            </div>
+            <div class="c2-bar-center">
+                <div class="c2-sites" id="c2SitesList">
+                    <!-- Site status indicators will be added dynamically -->
+                </div>
+            </div>
+            <div class="c2-bar-right">
+                <span class="c2-tracks-label">Fused Tracks:</span>
+                <span class="c2-tracks-count" id="fusedTrackCount">0</span>
+                <button id="btnC2Panel" class="btn btn-small">C2 Panel</button>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <main class="main-content-enhanced">
             <!-- Left Column - Radar Displays -->
@@ -343,6 +374,42 @@
                     </div>
                     <div class="iff-response" id="iffResponse">
                         <span class="iff-status">---</span>
+                    </div>
+                </div>
+
+                <!-- Terrain Effects Panel -->
+                <div class="terrain-panel">
+                    <h3>Terrain Effects</h3>
+                    <div class="terrain-controls">
+                        <label class="toggle">
+                            <input type="checkbox" id="terrainMaskingToggle" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Terrain Masking</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="clutterSimToggle" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Ground Clutter</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="multipathToggle" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Multipath</span>
+                        </label>
+                    </div>
+                    <div class="terrain-status">
+                        <div class="terrain-indicator">
+                            <span class="terrain-label">Weather:</span>
+                            <span class="terrain-value" id="weatherStatus">Clear</span>
+                        </div>
+                        <div class="terrain-indicator">
+                            <span class="terrain-label">Clutter:</span>
+                            <span class="terrain-value" id="clutterLevel">Low</span>
+                        </div>
+                        <div class="terrain-indicator">
+                            <span class="terrain-label">Masked:</span>
+                            <span class="terrain-value" id="maskedCount">0 tracks</span>
+                        </div>
                     </div>
                 </div>
             </div>

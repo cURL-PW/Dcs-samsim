@@ -33,6 +33,19 @@ class SAMSimClient {
         // Kill assessment history
         this.killHistory = [];
 
+        // C2 data
+        this.c2State = null;
+        this.fusedTracks = [];
+        this.siteStatuses = [];
+
+        // Terrain effects
+        this.terrainMasking = true;
+        this.clutterSim = true;
+        this.multipathSim = true;
+        this.maskedContacts = [];
+        this.clutterLevel = 'Low';
+        this.weatherStatus = 'Clear';
+
         // System configurations
         this.systemConfigs = {
             SA2: {
@@ -225,6 +238,25 @@ class SAMSimClient {
         // IFF controls
         document.getElementById('btnIffInterrogate')?.addEventListener('click', () => this.interrogateIFF());
         document.getElementById('iffModeSelect')?.addEventListener('change', (e) => this.sendIFFMode(parseInt(e.target.value)));
+
+        // C2 controls
+        document.getElementById('engagementPolicy')?.addEventListener('change', (e) => this.sendC2Command('SET_POLICY', { policy: e.target.value }));
+        document.getElementById('autoAssignToggle')?.addEventListener('change', (e) => this.sendC2Command('SET_AUTO_ASSIGN', { enabled: e.target.checked }));
+        document.getElementById('btnC2Panel')?.addEventListener('click', () => this.toggleC2Panel());
+
+        // Terrain controls
+        document.getElementById('terrainMaskingToggle')?.addEventListener('change', (e) => {
+            this.terrainMasking = e.target.checked;
+            this.sendTerrainSetting('masking', e.target.checked);
+        });
+        document.getElementById('clutterSimToggle')?.addEventListener('change', (e) => {
+            this.clutterSim = e.target.checked;
+            this.sendTerrainSetting('clutter', e.target.checked);
+        });
+        document.getElementById('multipathToggle')?.addEventListener('change', (e) => {
+            this.multipathSim = e.target.checked;
+            this.sendTerrainSetting('multipath', e.target.checked);
+        });
     }
 
     selectSystem(systemType) {
@@ -359,6 +391,10 @@ class SAMSimClient {
             this.handleKillAssessment(data);
         } else if (data.type === 'iff_response') {
             this.handleIFFResponse(data);
+        } else if (data.type === 'c2_update') {
+            this.handleC2Update(data);
+        } else if (data.type === 'terrain_update') {
+            this.handleTerrainUpdate(data);
         } else if (data.systemType) {
             // Direct state update
             this.state = data;
@@ -434,6 +470,30 @@ class SAMSimClient {
             mode: data.mode
         };
         this.updateIFFDisplay(data);
+    }
+
+    handleC2Update(data) {
+        this.c2State = data;
+        if (data.tracks) {
+            this.fusedTracks = data.tracks;
+        }
+        if (data.sites) {
+            this.siteStatuses = data.sites;
+        }
+        this.updateC2Display();
+    }
+
+    handleTerrainUpdate(data) {
+        if (data.maskedContacts) {
+            this.maskedContacts = data.maskedContacts;
+        }
+        if (data.weather) {
+            this.weatherStatus = data.weather;
+        }
+        if (data.clutterLevel) {
+            this.clutterLevel = data.clutterLevel;
+        }
+        this.updateTerrainDisplay();
     }
 
     updateDisplay() {
@@ -839,6 +899,66 @@ class SAMSimClient {
         `;
     }
 
+    updateC2Display() {
+        // Update C2 status
+        const c2Status = document.getElementById('c2Status');
+        if (c2Status && this.c2State) {
+            c2Status.textContent = this.c2State.dataLinkActive ? 'ONLINE' : 'OFFLINE';
+            c2Status.classList.toggle('active', this.c2State.dataLinkActive);
+        }
+
+        // Update fused track count
+        const trackCount = document.getElementById('fusedTrackCount');
+        if (trackCount) {
+            trackCount.textContent = this.fusedTracks.length;
+        }
+
+        // Update site status indicators
+        const sitesList = document.getElementById('c2SitesList');
+        if (sitesList && this.siteStatuses) {
+            sitesList.innerHTML = this.siteStatuses.map(site => {
+                const statusClass = site.assignedCount > 0 ? 'engaging' : (site.status === 'ACTIVE' ? 'active' : '');
+                return `
+                    <div class="c2-site-indicator ${statusClass}">
+                        <span class="c2-site-name">${site.id}</span>
+                        <span class="c2-site-status">${site.status}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    updateTerrainDisplay() {
+        // Update weather status
+        const weatherEl = document.getElementById('weatherStatus');
+        if (weatherEl) {
+            weatherEl.textContent = this.weatherStatus;
+        }
+
+        // Update clutter level
+        const clutterEl = document.getElementById('clutterLevel');
+        if (clutterEl) {
+            clutterEl.textContent = this.clutterLevel;
+            clutterEl.className = 'terrain-value';
+            if (this.clutterLevel === 'High') {
+                clutterEl.classList.add('alert');
+            } else if (this.clutterLevel === 'Medium') {
+                clutterEl.classList.add('warning');
+            }
+        }
+
+        // Update masked count
+        const maskedEl = document.getElementById('maskedCount');
+        if (maskedEl) {
+            maskedEl.textContent = `${this.maskedContacts.length} tracks`;
+        }
+    }
+
+    toggleC2Panel() {
+        // Toggle C2 detailed panel (could be a modal or expandable section)
+        this.log('C2 Panel toggled', 'info');
+    }
+
     updateIndicator(id, active) {
         const indicator = document.getElementById(id);
         if (indicator) {
@@ -923,6 +1043,11 @@ class SAMSimClient {
             ctx.stroke();
         }
 
+        // Draw ground clutter if enabled
+        if (this.clutterSim && this.clutterLevel !== 'Low') {
+            this.drawGroundClutter(ctx, cx, cy, radius);
+        }
+
         // Draw contacts
         if (this.state?.contacts) {
             this.state.contacts.forEach(contact => {
@@ -933,14 +1058,34 @@ class SAMSimClient {
                     const x = cx + Math.cos(contactAngle) * radius * normalizedRange;
                     const y = cy + Math.sin(contactAngle) * radius * normalizedRange;
 
-                    // Draw contact
-                    ctx.fillStyle = contact.id === this.selectedTarget ? '#ff0' : '#0f0';
+                    // Check if terrain masked
+                    const isMasked = this.terrainMasking && this.maskedContacts.includes(contact.id);
+
+                    // Draw contact (dimmed if masked)
+                    if (isMasked) {
+                        ctx.globalAlpha = 0.3;
+                        ctx.fillStyle = '#666';
+                    } else {
+                        ctx.globalAlpha = 1.0;
+                        ctx.fillStyle = contact.id === this.selectedTarget ? '#ff0' : '#0f0';
+                    }
+
                     ctx.beginPath();
                     ctx.arc(x, y, 4, 0, Math.PI * 2);
                     ctx.fill();
 
+                    // Draw masked indicator
+                    if (isMasked) {
+                        ctx.fillStyle = '#ff8800';
+                        ctx.font = '8px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('M', x, y - 6);
+                    }
+
+                    ctx.globalAlpha = 1.0;
+
                     // Draw velocity vector
-                    if (contact.heading !== undefined && contact.speed > 10) {
+                    if (contact.heading !== undefined && contact.speed > 10 && !isMasked) {
                         const headingRad = (contact.heading - 90) * Math.PI / 180;
                         const vecLength = Math.min(20, contact.speed / 20);
                         ctx.strokeStyle = '#0f0';
@@ -1102,6 +1247,27 @@ class SAMSimClient {
                 ctx.fillText('?', x, y - 8);
             }
         });
+    }
+
+    drawGroundClutter(ctx, cx, cy, radius) {
+        // Draw simulated ground clutter based on clutter level
+        const intensity = this.clutterLevel === 'High' ? 0.4 : 0.2;
+        const clutterRange = radius * 0.3;  // Clutter strongest at close range
+
+        ctx.fillStyle = `rgba(0, 80, 0, ${intensity})`;
+
+        // Draw random clutter dots
+        const numDots = this.clutterLevel === 'High' ? 100 : 50;
+        for (let i = 0; i < numDots; i++) {
+            const r = Math.random() * clutterRange;
+            const theta = Math.random() * Math.PI * 2;
+            const x = cx + Math.cos(theta) * r;
+            const y = cy + Math.sin(theta) * r;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 1 + Math.random() * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     drawMissiles(ctx, cx, cy, radius, rangeKm) {
@@ -1527,6 +1693,22 @@ class SAMSimClient {
         } else {
             this.log('Select a target for IFF interrogation', 'warning');
         }
+    }
+
+    sendC2Command(cmdType, params) {
+        this.sendCommand({
+            type: 'C2_COMMAND',
+            command: cmdType,
+            ...params
+        });
+    }
+
+    sendTerrainSetting(setting, value) {
+        this.sendCommand({
+            type: 'TERRAIN_SETTING',
+            setting: setting,
+            value: value
+        });
     }
 
     // UI helpers
