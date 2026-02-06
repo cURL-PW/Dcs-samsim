@@ -551,6 +551,54 @@
                         <span class="hint-text" id="hintText">Select a scenario to begin training</span>
                     </div>
                 </div>
+
+                <!-- SEAD Threat Panel -->
+                <div class="sead-panel" id="seadPanel">
+                    <h3>SEAD Threat Warning</h3>
+                    <div class="threat-level-display">
+                        <div class="threat-indicator">
+                            <span class="threat-label">Threat Level:</span>
+                            <span class="threat-value" id="seadThreatLevel">LOW</span>
+                        </div>
+                        <div class="threat-score-bar">
+                            <div class="threat-score-fill" id="threatScoreFill"></div>
+                        </div>
+                    </div>
+                    <div class="arm-warning" id="armWarning" style="display:none;">
+                        <div class="arm-warning-icon">⚠</div>
+                        <div class="arm-warning-text">
+                            <span class="arm-type" id="armType">ARM INBOUND</span>
+                            <span class="arm-tti" id="armTTI">TTI: --s</span>
+                        </div>
+                    </div>
+                    <div class="jammer-status" id="jammerStatus">
+                        <div class="jammer-indicator">
+                            <span class="jammer-label">Jammers:</span>
+                            <span class="jammer-count" id="jammerCount">0</span>
+                        </div>
+                        <div class="jammer-effect">
+                            <span class="effect-label">Effect:</span>
+                            <span class="effect-value" id="jammerEffect">NONE</span>
+                        </div>
+                    </div>
+                    <div class="emcon-recommendation" id="emconRec">
+                        <div class="emcon-action">
+                            <span class="emcon-label">EMCON:</span>
+                            <span class="emcon-value" id="emconAction">NORMAL</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoEmconToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Auto EMCON</span>
+                        </label>
+                    </div>
+                    <div class="damage-status" id="damageStatus">
+                        <div class="damage-indicator">
+                            <span class="damage-label">Site Status:</span>
+                            <span class="damage-value" id="siteStatus">OPERATIONAL</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Right Column - Firing Solution & Missiles -->

@@ -387,6 +387,9 @@ class SAMSimClient {
 
         // Auto mode (SA-15)
         document.getElementById('autoModeToggle')?.addEventListener('change', (e) => this.sendAutoModeToggle(e.target.checked));
+
+        // SEAD Auto EMCON
+        document.getElementById('autoEmconToggle')?.addEventListener('change', (e) => this.toggleAutoEMCON(e.target.checked));
     }
 
     selectSystem(systemType) {
@@ -748,6 +751,7 @@ class SAMSimClient {
         this.updateTargetList();
         this.updateFiringSolution();
         this.updateMissileStatus();
+        this.updateSEADPanel();
     }
 
     updateSA2Display() {
@@ -2536,6 +2540,121 @@ class SAMSimClient {
             this.hideInitSiteModal();
             this.log(`Initializing ${systemType} site: ${siteId}`, 'info');
         }
+    }
+
+    // ========================================================================
+    // SEAD Threat Management
+    // ========================================================================
+
+    updateSEADPanel() {
+        const seadState = this.state.sead;
+        if (!seadState) return;
+
+        // Update threat level
+        const threatLevel = seadState.threatLevel || 'LOW';
+        const threatScore = seadState.threatScore || 0;
+
+        const threatValueEl = document.getElementById('seadThreatLevel');
+        if (threatValueEl) {
+            threatValueEl.textContent = threatLevel;
+            threatValueEl.className = 'threat-value ' + threatLevel.toLowerCase();
+        }
+
+        const threatFillEl = document.getElementById('threatScoreFill');
+        if (threatFillEl) {
+            threatFillEl.style.width = `${Math.min(100, threatScore)}%`;
+        }
+
+        // Update ARM warning
+        const armWarning = document.getElementById('armWarning');
+        const armsInbound = seadState.armsInFlight || [];
+        const ourArms = armsInbound.filter(arm => arm.targetSite === this.currentSiteId);
+
+        if (ourArms.length > 0 && armWarning) {
+            armWarning.style.display = 'flex';
+            const closestArm = ourArms.reduce((closest, arm) =>
+                !closest || arm.tti < closest.tti ? arm : closest, null);
+
+            const armTypeEl = document.getElementById('armType');
+            const armTTIEl = document.getElementById('armTTI');
+
+            if (armTypeEl) armTypeEl.textContent = `${closestArm.name} INBOUND`;
+            if (armTTIEl) armTTIEl.textContent = `TTI: ${Math.round(closestArm.tti)}s`;
+
+            // Sound alarm for critical threats
+            if (closestArm.tti < 30) {
+                this.log(`CRITICAL: ${closestArm.name} impact in ${Math.round(closestArm.tti)}s!`, 'error');
+            }
+        } else if (armWarning) {
+            armWarning.style.display = 'none';
+        }
+
+        // Update jammer status
+        const jammers = seadState.detectedJammers || [];
+        const jammerCountEl = document.getElementById('jammerCount');
+        const jammerEffectEl = document.getElementById('jammerEffect');
+
+        if (jammerCountEl) jammerCountEl.textContent = jammers.length;
+
+        if (jammerEffectEl && jammers.length > 0) {
+            // Find worst jammer effect
+            const worstEffect = jammers.reduce((worst, j) =>
+                !worst || this.getEffectSeverity(j.effect?.effectLevel) > this.getEffectSeverity(worst)
+                    ? j.effect?.effectLevel : worst, 'NONE');
+            jammerEffectEl.textContent = worstEffect;
+            jammerEffectEl.className = 'effect-value ' + worstEffect.toLowerCase();
+        } else if (jammerEffectEl) {
+            jammerEffectEl.textContent = 'NONE';
+            jammerEffectEl.className = 'effect-value none';
+        }
+
+        // Update EMCON recommendation
+        const emconRec = seadState.emconRecommendation;
+        if (emconRec) {
+            const emconActionEl = document.getElementById('emconAction');
+            if (emconActionEl) {
+                let actionClass = 'normal';
+                if (emconRec.action === 'IMMEDIATE_SHUTDOWN') actionClass = 'immediate';
+                else if (emconRec.action === 'SHUTDOWN') actionClass = 'shutdown';
+                else if (emconRec.action === 'REDUCED_POWER') actionClass = 'reduced';
+
+                emconActionEl.textContent = emconRec.action.replace(/_/g, ' ');
+                emconActionEl.className = 'emcon-value ' + actionClass;
+            }
+        }
+
+        // Update site damage status
+        const damage = seadState.damage;
+        if (damage) {
+            const siteStatusEl = document.getElementById('siteStatus');
+            if (siteStatusEl) {
+                const status = damage.status || 'OPERATIONAL';
+                siteStatusEl.textContent = status.replace(/_/g, ' ');
+                siteStatusEl.className = 'damage-value ' + status.toLowerCase().replace(/_/g, '-');
+            }
+        }
+    }
+
+    getEffectSeverity(effect) {
+        const severities = { 'NONE': 0, 'LIGHT': 1, 'MODERATE': 2, 'SEVERE': 3 };
+        return severities[effect] || 0;
+    }
+
+    toggleAutoEMCON(enabled) {
+        this.sendCommand({
+            type: 'AUTO_EMCON',
+            enable: enabled
+        });
+        this.log(`Auto EMCON ${enabled ? 'enabled' : 'disabled'}`, 'info');
+    }
+
+    requestEMCON() {
+        // Manual EMCON request
+        this.sendCommand({
+            type: 'MANUAL_EMCON',
+            action: 'SHUTDOWN'
+        });
+        this.log('Manual EMCON shutdown requested', 'warning');
     }
 }
 
