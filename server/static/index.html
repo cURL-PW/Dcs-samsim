@@ -599,6 +599,43 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Multiplayer Panel -->
+                <div class="multiplayer-panel" id="multiplayerPanel">
+                    <h3>Multiplayer</h3>
+                    <div class="mp-session-info">
+                        <div class="session-indicator">
+                            <span class="session-label">Session:</span>
+                            <span class="session-value" id="mpSessionName">Not Connected</span>
+                        </div>
+                        <div class="session-indicator">
+                            <span class="session-label">Role:</span>
+                            <span class="session-value role-badge" id="mpPlayerRole">---</span>
+                        </div>
+                    </div>
+                    <div class="mp-players" id="mpPlayersPanel">
+                        <div class="mp-players-header">
+                            <span>Players Online:</span>
+                            <span id="mpPlayerCount">0</span>
+                        </div>
+                        <div class="mp-players-list" id="mpPlayersList">
+                            <!-- Player entries added dynamically -->
+                        </div>
+                    </div>
+                    <div class="mp-controls">
+                        <button id="btnJoinSession" class="btn btn-small btn-primary">Join</button>
+                        <button id="btnLeaveSession" class="btn btn-small" disabled>Leave</button>
+                    </div>
+                    <div class="mp-chat" id="mpChatPanel">
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Chat messages added dynamically -->
+                        </div>
+                        <div class="chat-input-row">
+                            <input type="text" id="chatInput" placeholder="Type message..." class="chat-input">
+                            <button id="btnSendChat" class="btn btn-small">Send</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Right Column - Firing Solution & Missiles -->

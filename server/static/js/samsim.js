@@ -390,6 +390,14 @@ class SAMSimClient {
 
         // SEAD Auto EMCON
         document.getElementById('autoEmconToggle')?.addEventListener('change', (e) => this.toggleAutoEMCON(e.target.checked));
+
+        // Multiplayer controls
+        document.getElementById('btnJoinSession')?.addEventListener('click', () => this.showJoinDialog());
+        document.getElementById('btnLeaveSession')?.addEventListener('click', () => this.leaveSession());
+        document.getElementById('btnSendChat')?.addEventListener('click', () => this.sendChatMessage());
+        document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.sendChatMessage();
+        });
     }
 
     selectSystem(systemType) {
@@ -2655,6 +2663,151 @@ class SAMSimClient {
             action: 'SHUTDOWN'
         });
         this.log('Manual EMCON shutdown requested', 'warning');
+    }
+
+    // ========================================================================
+    // Multiplayer Support
+    // ========================================================================
+
+    initMultiplayer() {
+        this.mpState = {
+            connected: false,
+            sessionId: null,
+            playerId: null,
+            playerName: 'Player',
+            role: null,
+            players: [],
+            assignedSites: [],
+        };
+    }
+
+    showJoinDialog() {
+        const playerName = prompt('Enter your name:', 'Player');
+        if (playerName) {
+            this.joinSession(playerName);
+        }
+    }
+
+    joinSession(playerName) {
+        this.mpState = this.mpState || {};
+        this.mpState.playerName = playerName;
+
+        this.sendCommand({
+            type: 'JOIN_SESSION',
+            playerName: playerName,
+            role: 'OPERATOR'
+        });
+
+        this.log(`Joining session as ${playerName}...`, 'info');
+    }
+
+    leaveSession() {
+        this.sendCommand({
+            type: 'LEAVE_SESSION'
+        });
+
+        this.mpState.connected = false;
+        this.mpState.sessionId = null;
+        this.mpState.role = null;
+
+        this.updateMultiplayerPanel();
+        this.log('Left session', 'info');
+    }
+
+    sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        if (!input || !input.value.trim()) return;
+
+        this.sendCommand({
+            type: 'CHAT',
+            message: input.value.trim(),
+            channel: 'ALL'
+        });
+
+        input.value = '';
+    }
+
+    updateMultiplayerPanel() {
+        const mpState = this.state.multiplayer || this.mpState || {};
+
+        // Update session info
+        const sessionNameEl = document.getElementById('mpSessionName');
+        if (sessionNameEl) {
+            sessionNameEl.textContent = mpState.session?.name || 'Not Connected';
+        }
+
+        // Update role
+        const roleEl = document.getElementById('mpPlayerRole');
+        if (roleEl && mpState.role) {
+            roleEl.textContent = mpState.role;
+            roleEl.className = 'session-value role-badge ' + mpState.role.toLowerCase().replace(/_/g, '-');
+        }
+
+        // Update player count and list
+        const players = mpState.players || {};
+        const playerCount = Object.keys(players).length;
+
+        const countEl = document.getElementById('mpPlayerCount');
+        if (countEl) countEl.textContent = playerCount;
+
+        const listEl = document.getElementById('mpPlayersList');
+        if (listEl) {
+            listEl.innerHTML = Object.values(players).map(p => `
+                <div class="mp-player-entry">
+                    <span class="mp-player-name ${p.connected ? '' : 'disconnected'}">${p.name}</span>
+                    <span class="role-badge ${p.role.toLowerCase().replace(/_/g, '-')}">${p.role}</span>
+                    <span class="mp-player-sites">${p.assignedSites?.length || 0} sites</span>
+                </div>
+            `).join('');
+        }
+
+        // Update buttons
+        const joinBtn = document.getElementById('btnJoinSession');
+        const leaveBtn = document.getElementById('btnLeaveSession');
+        if (joinBtn) joinBtn.disabled = mpState.connected;
+        if (leaveBtn) leaveBtn.disabled = !mpState.connected;
+
+        // Update chat
+        this.updateChatMessages(mpState.chat || []);
+    }
+
+    updateChatMessages(messages) {
+        const chatEl = document.getElementById('chatMessages');
+        if (!chatEl) return;
+
+        chatEl.innerHTML = messages.map(msg => `
+            <div class="chat-message">
+                <span class="chat-time">${this.formatTime(msg.timestamp)}</span>
+                <span class="chat-sender">${msg.playerName}:</span>
+                <span class="chat-text">${this.escapeHtml(msg.message)}</span>
+            </div>
+        `).join('');
+
+        // Scroll to bottom
+        chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    formatTime(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    handleMultiplayerResponse(data) {
+        if (data.type === 'JOIN_SESSION' && data.success) {
+            this.mpState.connected = true;
+            this.mpState.sessionId = data.data.sessionId;
+            this.mpState.playerId = data.data.playerId;
+            this.mpState.role = data.data.role;
+            this.log(`Joined as ${data.data.role}`, 'success');
+        }
+        this.updateMultiplayerPanel();
     }
 }
 
