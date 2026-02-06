@@ -122,6 +122,53 @@ class SAMSimClient {
                 missiles: 16,
                 multiChannel: true,
                 channels: 4  // 4 TELARs
+            },
+            SA8: {
+                name: 'SA-8 Gecko',
+                sovietName: '9K33 Osa',
+                ewRadar: 'Land Roll Search',
+                fcRadar: 'Land Roll Track',
+                missile: '9M33',
+                ewMaxRange: 30,
+                fcMaxRange: 20,
+                missileMaxRange: 10,
+                missileMinRange: 1.5,
+                missiles: 6,
+                multiChannel: false,
+                optical: true,  // Has optical backup
+                allInOne: true  // All on one vehicle
+            },
+            SA15: {
+                name: 'SA-15 Gauntlet',
+                sovietName: '9K330 Tor',
+                ewRadar: '3D Surveillance',
+                fcRadar: 'Phased Array Track',
+                missile: '9M331',
+                ewMaxRange: 25,
+                fcMaxRange: 20,
+                missileMaxRange: 12,
+                missileMinRange: 1,
+                missiles: 8,
+                multiChannel: true,
+                channels: 4,
+                autoMode: true  // Fully autonomous
+            },
+            SA19: {
+                name: 'SA-19 Grison',
+                sovietName: '2K22 Tunguska',
+                ewRadar: 'Hot Shot Search',
+                fcRadar: 'Hot Shot Track',
+                missile: '9M311',
+                ewMaxRange: 18,
+                fcMaxRange: 13,
+                missileMaxRange: 8,
+                missileMinRange: 1.5,
+                missiles: 8,
+                multiChannel: false,
+                optical: true,
+                hasGun: true,  // Combined gun/missile
+                gunRange: 4,
+                gunRounds: 1000
             }
         };
 
@@ -274,6 +321,18 @@ class SAMSimClient {
         document.getElementById('btnStopTraining')?.addEventListener('click', () => this.stopTraining());
         document.getElementById('closeDebrief')?.addEventListener('click', () => this.hideDebriefModal());
         document.getElementById('retryScenario')?.addEventListener('click', () => this.retryScenario());
+
+        // Optical tracking controls (SA-8, SA-19)
+        document.getElementById('btnOpticalActivate')?.addEventListener('click', () => this.sendOpticalCommand('ACTIVATE'));
+        document.getElementById('btnOpticalDeactivate')?.addEventListener('click', () => this.sendOpticalCommand('DEACTIVATE'));
+
+        // Gun controls (SA-19)
+        document.getElementById('weaponModeSelect')?.addEventListener('change', (e) => this.sendWeaponMode(e.target.value));
+        document.getElementById('btnGunFire')?.addEventListener('click', () => this.sendCommand({ type: 'GUN_FIRE' }));
+        document.getElementById('btnGunCeasefire')?.addEventListener('click', () => this.sendCommand({ type: 'GUN_CEASEFIRE' }));
+
+        // Auto mode (SA-15)
+        document.getElementById('autoModeToggle')?.addEventListener('change', (e) => this.sendAutoModeToggle(e.target.checked));
     }
 
     selectSystem(systemType) {
@@ -307,6 +366,24 @@ class SAMSimClient {
             if (config.multiChannel) {
                 this.initChannelGrid(config.channels);
             }
+        }
+
+        // Show/hide optical panel (SA-8, SA-19)
+        const opticalPanel = document.getElementById('opticalPanel');
+        if (opticalPanel) {
+            opticalPanel.style.display = config.optical ? 'block' : 'none';
+        }
+
+        // Show/hide gun panel (SA-19)
+        const gunPanel = document.getElementById('gunPanel');
+        if (gunPanel) {
+            gunPanel.style.display = config.hasGun ? 'block' : 'none';
+        }
+
+        // Show/hide auto mode panel (SA-15)
+        const autoModePanel = document.getElementById('autoModePanel');
+        if (autoModePanel) {
+            autoModePanel.style.display = config.autoMode ? 'block' : 'none';
         }
 
         // Update indicator labels based on system
@@ -347,6 +424,9 @@ class SAMSimClient {
                 case 'SA6': ewLabel.textContent = '1S91'; break;
                 case 'SA10': ewLabel.textContent = 'BB'; break;
                 case 'SA11': ewLabel.textContent = 'SD'; break;
+                case 'SA8': ewLabel.textContent = 'LR'; break;   // Land Roll
+                case 'SA15': ewLabel.textContent = '3D'; break;  // 3D Surveillance
+                case 'SA19': ewLabel.textContent = 'HS'; break;  // Hot Shot
             }
         }
 
@@ -357,7 +437,22 @@ class SAMSimClient {
                 case 'SA6': fcLabel.textContent = 'TRK'; break;
                 case 'SA10': fcLabel.textContent = 'FL'; break;
                 case 'SA11': fcLabel.textContent = 'FD'; break;
+                case 'SA8': fcLabel.textContent = 'TRK'; break;  // Track mode
+                case 'SA15': fcLabel.textContent = 'PA'; break;  // Phased Array
+                case 'SA19': fcLabel.textContent = 'TRK'; break; // Track mode
             }
+        }
+
+        // Show/hide optical indicator for systems with optical backup
+        const opticalIndicator = document.getElementById('indOptical');
+        if (opticalIndicator) {
+            opticalIndicator.style.display = config.optical ? 'flex' : 'none';
+        }
+
+        // Show/hide gun controls for SA-19
+        const gunPanel = document.getElementById('gunPanel');
+        if (gunPanel) {
+            gunPanel.style.display = config.hasGun ? 'block' : 'none';
         }
     }
 
@@ -564,6 +659,15 @@ class SAMSimClient {
             case 'SA11':
                 this.updateSA11Display();
                 break;
+            case 'SA8':
+                this.updateSA8Display();
+                break;
+            case 'SA15':
+                this.updateSA15Display();
+                break;
+            case 'SA19':
+                this.updateSA19Display();
+                break;
             default:
                 this.updateGenericDisplay();
         }
@@ -687,6 +791,138 @@ class SAMSimClient {
         // Update TELARs
         if (state.telars) {
             this.updateTelars(state.telars);
+        }
+    }
+
+    updateSA8Display() {
+        const state = this.state;
+
+        // Land Roll radar (combined search/track on single vehicle)
+        if (state.radar) {
+            document.getElementById('ewModeDisplay').textContent = state.radar.modeName || 'OFF';
+            document.getElementById('ewAntennaAz').textContent = Math.round(state.radar.azimuth || 0);
+            this.ewSweepAngle = state.radar.azimuth || 0;
+
+            document.getElementById('fcModeDisplay').textContent = state.radar.trackModeName || state.radar.modeName || 'OFF';
+            this.fcSweepAngle = state.radar.trackAzimuth || state.radar.azimuth || 0;
+
+            this.updateIndicator('indEW', state.radar.mode >= 2);
+            this.updateIndicator('indFC', state.radar.mode >= 3);
+            this.updateIndicator('indTrack', state.radar.trackValid);
+            this.updateIndicator('indGuide', state.radar.mode >= 4);
+        }
+
+        // Optical tracking mode
+        if (state.optical) {
+            const opticalEl = document.getElementById('opticalStatus');
+            if (opticalEl) {
+                opticalEl.textContent = state.optical.active ? 'ACTIVE' : 'STANDBY';
+                opticalEl.classList.toggle('active', state.optical.active);
+            }
+            // Show optical indicator (EMCON mode)
+            this.updateIndicator('indOptical', state.optical.active);
+        }
+
+        if (state.track && state.track.valid) {
+            this.updateTrackData(state.track);
+        }
+    }
+
+    updateSA15Display() {
+        const state = this.state;
+
+        // 3D Surveillance radar
+        if (state.searchRadar) {
+            document.getElementById('ewModeDisplay').textContent = state.searchRadar.modeName || 'OFF';
+            document.getElementById('ewAntennaAz').textContent = Math.round(state.searchRadar.azimuth || 0);
+            this.ewSweepAngle = state.searchRadar.azimuth || 0;
+            this.updateIndicator('indEW', state.searchRadar.mode > 0);
+        }
+
+        // Phased array track radar
+        if (state.trackRadar) {
+            document.getElementById('fcModeDisplay').textContent = state.trackRadar.modeName || 'OFF';
+            this.updateIndicator('indFC', state.trackRadar.mode > 0);
+
+            // Update channel status (4-channel capability)
+            if (state.trackRadar.channels) {
+                this.updateChannels(state.trackRadar.channels);
+            }
+        }
+
+        // Auto mode indicator
+        if (state.autoMode !== undefined) {
+            const autoEl = document.getElementById('autoModeStatus');
+            if (autoEl) {
+                autoEl.textContent = state.autoMode ? 'AUTO' : 'MANUAL';
+                autoEl.classList.toggle('active', state.autoMode);
+            }
+        }
+
+        // Track data (can have multiple tracks)
+        if (state.tracks && state.tracks.length > 0) {
+            // Primary track
+            this.updateTrackData(state.tracks[0]);
+            this.updateIndicator('indTrack', true);
+            this.updateIndicator('indGuide', state.guidanceActive);
+        } else if (state.track && state.track.valid) {
+            this.updateTrackData(state.track);
+            this.updateIndicator('indTrack', true);
+        }
+    }
+
+    updateSA19Display() {
+        const state = this.state;
+
+        // Hot Shot radar
+        if (state.radar) {
+            document.getElementById('ewModeDisplay').textContent = state.radar.modeName || 'OFF';
+            document.getElementById('ewAntennaAz').textContent = Math.round(state.radar.azimuth || 0);
+            this.ewSweepAngle = state.radar.azimuth || 0;
+
+            document.getElementById('fcModeDisplay').textContent = state.radar.trackModeName || 'OFF';
+            this.fcSweepAngle = state.radar.trackAzimuth || 0;
+
+            this.updateIndicator('indEW', state.radar.mode >= 2);
+            this.updateIndicator('indFC', state.radar.mode >= 3);
+            this.updateIndicator('indTrack', state.radar.trackValid);
+        }
+
+        // Gun status
+        if (state.gun) {
+            const gunStatusEl = document.getElementById('gunStatus');
+            const gunRoundsEl = document.getElementById('gunRounds');
+            const gunModeEl = document.getElementById('gunMode');
+
+            if (gunStatusEl) {
+                gunStatusEl.textContent = state.gun.firing ? 'FIRING' : (state.gun.ready ? 'READY' : 'SAFE');
+                gunStatusEl.className = 'gun-status ' + (state.gun.firing ? 'firing' : (state.gun.ready ? 'ready' : ''));
+            }
+            if (gunRoundsEl) {
+                gunRoundsEl.textContent = `${state.gun.rounds} / 1000`;
+            }
+            if (gunModeEl) {
+                gunModeEl.textContent = state.gun.mode || 'SAFE';
+            }
+        }
+
+        // Optical tracking
+        if (state.optical) {
+            const opticalEl = document.getElementById('opticalStatus');
+            if (opticalEl) {
+                opticalEl.textContent = state.optical.active ? 'TRACKING' : 'STANDBY';
+                opticalEl.classList.toggle('active', state.optical.active);
+            }
+        }
+
+        // Weapon mode (MISSILE_ONLY, GUN_ONLY, COMBINED, AUTO)
+        const weaponModeEl = document.getElementById('weaponMode');
+        if (weaponModeEl && state.weaponMode) {
+            weaponModeEl.textContent = state.weaponMode;
+        }
+
+        if (state.track && state.track.valid) {
+            this.updateTrackData(state.track);
         }
     }
 
@@ -1651,15 +1887,41 @@ class SAMSimClient {
     }
 
     sendPowerCommand(state) {
-        const ewSystem = this.currentSystem === 'SA10' ? 'BIGBIRD' :
-                        this.currentSystem === 'SA11' ? 'SNOWDRIFT' :
-                        this.currentSystem === 'SA6' ? 'RADAR' :
-                        this.currentSystem === 'SA3' ? 'P15' : 'P19';
+        let ewSystem, fcSystem;
 
-        const fcSystem = this.currentSystem === 'SA10' ? 'FLAPLID' :
-                        this.currentSystem === 'SA11' ? 'TELAR' :
-                        this.currentSystem === 'SA6' ? 'RADAR' :
-                        this.currentSystem === 'SA3' ? 'SNR125' : 'SNR75';
+        switch(this.currentSystem) {
+            case 'SA10':
+                ewSystem = 'BIGBIRD';
+                fcSystem = 'FLAPLID';
+                break;
+            case 'SA11':
+                ewSystem = 'SNOWDRIFT';
+                fcSystem = 'TELAR';
+                break;
+            case 'SA6':
+                ewSystem = 'RADAR';
+                fcSystem = 'RADAR';
+                break;
+            case 'SA3':
+                ewSystem = 'P15';
+                fcSystem = 'SNR125';
+                break;
+            case 'SA8':
+                ewSystem = 'LANDROLL';
+                fcSystem = 'LANDROLL';  // Combined system
+                break;
+            case 'SA15':
+                ewSystem = 'SURVEILLANCE';
+                fcSystem = 'TRACKRADAR';
+                break;
+            case 'SA19':
+                ewSystem = 'HOTSHOT';
+                fcSystem = 'HOTSHOT';  // Combined system
+                break;
+            default:
+                ewSystem = 'P19';
+                fcSystem = 'SNR75';
+        }
 
         this.sendCommand({ type: 'POWER', system: ewSystem, state: state });
         if (ewSystem !== fcSystem) {
@@ -1670,21 +1932,59 @@ class SAMSimClient {
     }
 
     sendEWModeCommand(mode) {
-        const modeType = this.currentSystem === 'SA10' ? 'SURVEILLANCE_MODE' :
-                        this.currentSystem === 'SA11' ? 'SNOWDRIFT_MODE' :
-                        this.currentSystem === 'SA6' ? 'RADAR_MODE' :
-                        this.currentSystem === 'SA3' ? 'P15_MODE' : 'P19_MODE';
+        let modeType;
+        switch(this.currentSystem) {
+            case 'SA10': modeType = 'SURVEILLANCE_MODE'; break;
+            case 'SA11': modeType = 'SNOWDRIFT_MODE'; break;
+            case 'SA6': modeType = 'RADAR_MODE'; break;
+            case 'SA3': modeType = 'P15_MODE'; break;
+            case 'SA8': modeType = 'LANDROLL_MODE'; break;
+            case 'SA15': modeType = 'SURVEILLANCE_MODE'; break;
+            case 'SA19': modeType = 'HOTSHOT_MODE'; break;
+            default: modeType = 'P19_MODE';
+        }
 
         const modeNames = ['OFF', 'STANDBY', 'SEARCH', 'SECTOR'];
         this.sendCommand({ type: modeType, mode: modeNames[mode] || 'STANDBY' });
     }
 
     sendFCModeCommand(mode) {
-        const modeType = this.currentSystem === 'SA3' ? 'SNR125_MODE' :
-                        this.currentSystem === 'SA6' ? 'RADAR_MODE' : 'SNR75_MODE';
+        let modeType;
+        switch(this.currentSystem) {
+            case 'SA3': modeType = 'SNR125_MODE'; break;
+            case 'SA6': modeType = 'RADAR_MODE'; break;
+            case 'SA8': modeType = 'LANDROLL_MODE'; break;
+            case 'SA15': modeType = 'TRACKRADAR_MODE'; break;
+            case 'SA19': modeType = 'HOTSHOT_MODE'; break;
+            default: modeType = 'SNR75_MODE';
+        }
 
         const modeNames = ['OFF', 'STANDBY', 'ACQUISITION', 'TRACK', 'GUIDANCE'];
         this.sendCommand({ type: modeType, mode: modeNames[mode] || 'STANDBY' });
+    }
+
+    // SA-19 specific - weapon mode control
+    sendWeaponMode(mode) {
+        this.sendCommand({
+            type: 'WEAPON_MODE',
+            mode: mode  // SAFE, MISSILE_ONLY, GUN_ONLY, COMBINED, AUTO
+        });
+    }
+
+    // SA-8/SA-19 specific - optical tracking
+    sendOpticalCommand(command) {
+        this.sendCommand({
+            type: 'OPTICAL_COMMAND',
+            command: command  // ACTIVATE, DEACTIVATE, TRACK
+        });
+    }
+
+    // SA-15 specific - auto mode toggle
+    sendAutoModeToggle(enabled) {
+        this.sendCommand({
+            type: 'AUTO_MODE',
+            enabled: enabled
+        });
     }
 
     sendAntennaCommand() {

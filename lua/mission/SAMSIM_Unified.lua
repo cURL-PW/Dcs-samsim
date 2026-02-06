@@ -2,19 +2,25 @@
     Unified SAMSim Controller for DCS World
 
     Manages multiple SAM system simulations:
+    Long Range:
     - SA-2 Guideline (S-75 Dvina)
     - SA-3 Goa (S-125 Neva/Pechora)
-    - SA-6 Gainful (2K12 Kub)
     - SA-10 Grumble (S-300PS)
+    Medium Range:
+    - SA-6 Gainful (2K12 Kub)
     - SA-11 Gadfly (9K37 Buk)
+    Short Range:
+    - SA-8 Gecko (9K33 Osa)
+    - SA-15 Gauntlet (9K330 Tor)
+    - SA-19 Grison (2K22 Tunguska)
 
     Author: Claude Code
-    Version: 1.0
+    Version: 1.1
 ]]
 
 SAMSIM = SAMSIM or {}
 SAMSIM.Unified = {}
-SAMSIM.Unified.Version = "1.0.0"
+SAMSIM.Unified.Version = "1.1.0"
 
 -- ============================================================================
 -- System Registry
@@ -55,6 +61,30 @@ SAMSIM.Unified.Systems = {
         controller = nil,
         loaded = false,
     },
+    SA8 = {
+        name = "SA-8 Gecko",
+        natoName = "SA-8 Gecko",
+        sovietName = "9K33 Osa",
+        category = "short_range",
+        controller = nil,
+        loaded = false,
+    },
+    SA15 = {
+        name = "SA-15 Gauntlet",
+        natoName = "SA-15 Gauntlet",
+        sovietName = "9K330 Tor",
+        category = "short_range",
+        controller = nil,
+        loaded = false,
+    },
+    SA19 = {
+        name = "SA-19 Grison",
+        natoName = "SA-19 Grison",
+        sovietName = "2K22 Tunguska",
+        category = "short_range",
+        controller = nil,
+        loaded = false,
+    },
 }
 
 -- ============================================================================
@@ -86,6 +116,12 @@ function SAMSIM.Unified.createSite(siteId, systemType, name, position, heading)
         controller = SAMSIM_SA10
     elseif systemType == "SA11" and SAMSIM_SA11 then
         controller = SAMSIM_SA11
+    elseif systemType == "SA8" and SA8_SAMSIM then
+        controller = SA8_SAMSIM
+    elseif systemType == "SA15" and SA15_SAMSIM then
+        controller = SA15_SAMSIM
+    elseif systemType == "SA19" and SA19_SAMSIM then
+        controller = SA19_SAMSIM
     end
 
     if not controller then
@@ -434,6 +470,7 @@ end
 -- ============================================================================
 function SAMSIM.Unified.initialize()
     -- Check which controllers are loaded
+    -- Long Range Systems
     if SAMSIM and SAMSIM.State then
         SAMSIM.Unified.Systems.SA2.loaded = true
         SAMSIM.Unified.Systems.SA2.controller = SAMSIM
@@ -442,17 +479,33 @@ function SAMSIM.Unified.initialize()
         SAMSIM.Unified.Systems.SA3.loaded = true
         SAMSIM.Unified.Systems.SA3.controller = SAMSIM_SA3
     end
-    if SAMSIM_SA6 then
-        SAMSIM.Unified.Systems.SA6.loaded = true
-        SAMSIM.Unified.Systems.SA6.controller = SAMSIM_SA6
-    end
     if SAMSIM_SA10 then
         SAMSIM.Unified.Systems.SA10.loaded = true
         SAMSIM.Unified.Systems.SA10.controller = SAMSIM_SA10
     end
+
+    -- Medium Range Systems
+    if SAMSIM_SA6 then
+        SAMSIM.Unified.Systems.SA6.loaded = true
+        SAMSIM.Unified.Systems.SA6.controller = SAMSIM_SA6
+    end
     if SAMSIM_SA11 then
         SAMSIM.Unified.Systems.SA11.loaded = true
         SAMSIM.Unified.Systems.SA11.controller = SAMSIM_SA11
+    end
+
+    -- Short Range Systems
+    if SA8_SAMSIM then
+        SAMSIM.Unified.Systems.SA8.loaded = true
+        SAMSIM.Unified.Systems.SA8.controller = SA8_SAMSIM
+    end
+    if SA15_SAMSIM then
+        SAMSIM.Unified.Systems.SA15.loaded = true
+        SAMSIM.Unified.Systems.SA15.controller = SA15_SAMSIM
+    end
+    if SA19_SAMSIM then
+        SAMSIM.Unified.Systems.SA19.loaded = true
+        SAMSIM.Unified.Systems.SA19.controller = SA19_SAMSIM
     end
 
     -- Initialize network
@@ -491,6 +544,21 @@ end
 -- Create a complete SA-11 battery
 function SAMSIM.Unified.createSA11Battery(name, position, heading)
     return SAMSIM.Unified.createSite(name or "SA11_1", "SA11", name, position, heading)
+end
+
+-- Create a complete SA-8 Gecko vehicle
+function SAMSIM.Unified.createSA8Vehicle(name, position, heading)
+    return SAMSIM.Unified.createSite(name or "SA8_1", "SA8", name, position, heading)
+end
+
+-- Create a complete SA-15 Tor vehicle
+function SAMSIM.Unified.createSA15Vehicle(name, position, heading)
+    return SAMSIM.Unified.createSite(name or "SA15_1", "SA15", name, position, heading)
+end
+
+-- Create a complete SA-19 Tunguska vehicle
+function SAMSIM.Unified.createSA19Vehicle(name, position, heading)
+    return SAMSIM.Unified.createSite(name or "SA19_1", "SA19", name, position, heading)
 end
 
 env.info("SAMSIM Unified Controller loaded - Version " .. SAMSIM.Unified.Version)

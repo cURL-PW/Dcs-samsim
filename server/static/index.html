@@ -18,11 +18,20 @@
                 <div class="system-selector-header">
                     <select id="samSystemSelect" class="sam-select">
                         <option value="">-- Select System --</option>
-                        <option value="SA2">SA-2 Guideline (S-75)</option>
-                        <option value="SA3">SA-3 Goa (S-125)</option>
-                        <option value="SA6">SA-6 Gainful (2K12 Kub)</option>
-                        <option value="SA10">SA-10 Grumble (S-300PS)</option>
-                        <option value="SA11">SA-11 Gadfly (9K37 Buk)</option>
+                        <optgroup label="Long Range">
+                            <option value="SA2">SA-2 Guideline (S-75)</option>
+                            <option value="SA3">SA-3 Goa (S-125)</option>
+                            <option value="SA10">SA-10 Grumble (S-300PS)</option>
+                        </optgroup>
+                        <optgroup label="Medium Range">
+                            <option value="SA6">SA-6 Gainful (2K12 Kub)</option>
+                            <option value="SA11">SA-11 Gadfly (9K37 Buk)</option>
+                        </optgroup>
+                        <optgroup label="Short Range">
+                            <option value="SA8">SA-8 Gecko (9K33 Osa)</option>
+                            <option value="SA15">SA-15 Gauntlet (9K330 Tor)</option>
+                            <option value="SA19">SA-19 Grison (2K22 Tunguska)</option>
+                        </optgroup>
                     </select>
                 </div>
                 <div class="system-state" id="systemStateDisplay">
@@ -207,6 +216,80 @@
                             <span class="indicator-light"></span>
                             <span class="indicator-label">GDE</span>
                         </div>
+                        <div class="indicator" id="indOptical" style="display:none;">
+                            <span class="indicator-light optical"></span>
+                            <span class="indicator-label">OPT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optical Tracking Panel (SA-8, SA-19) -->
+                <div class="optical-panel" id="opticalPanel" style="display:none;">
+                    <h3>Optical Tracking</h3>
+                    <div class="optical-status-display">
+                        <div class="optical-indicator">
+                            <span class="optical-label">Status:</span>
+                            <span class="optical-value" id="opticalStatus">STANDBY</span>
+                        </div>
+                    </div>
+                    <div class="optical-controls">
+                        <button id="btnOpticalActivate" class="btn btn-small">ACTIVATE</button>
+                        <button id="btnOpticalDeactivate" class="btn btn-small">DEACTIVATE</button>
+                    </div>
+                    <div class="optical-hint">
+                        <small>EMCON mode - passive tracking without radar emissions</small>
+                    </div>
+                </div>
+
+                <!-- Gun Panel (SA-19 Tunguska) -->
+                <div class="gun-panel" id="gunPanel" style="display:none;">
+                    <h3>Gun System (2x 30mm)</h3>
+                    <div class="gun-status-display">
+                        <div class="gun-indicator">
+                            <span class="gun-label">Status:</span>
+                            <span class="gun-value gun-status" id="gunStatus">SAFE</span>
+                        </div>
+                        <div class="gun-indicator">
+                            <span class="gun-label">Rounds:</span>
+                            <span class="gun-value" id="gunRounds">1000 / 1000</span>
+                        </div>
+                    </div>
+                    <div class="weapon-mode-selector">
+                        <label>Weapon Mode:</label>
+                        <select id="weaponModeSelect" class="weapon-mode-select">
+                            <option value="SAFE">SAFE</option>
+                            <option value="MISSILE_ONLY">MISSILE ONLY</option>
+                            <option value="GUN_ONLY">GUN ONLY</option>
+                            <option value="COMBINED">COMBINED</option>
+                            <option value="AUTO">AUTO</option>
+                        </select>
+                    </div>
+                    <div class="gun-controls">
+                        <button id="btnGunFire" class="btn btn-fire" disabled>FIRE GUN</button>
+                        <button id="btnGunCeasefire" class="btn btn-small">CEASEFIRE</button>
+                    </div>
+                    <div class="gun-engagement-envelope">
+                        <span class="envelope-label">Gun Range:</span>
+                        <span class="envelope-value">200m - 4000m</span>
+                    </div>
+                </div>
+
+                <!-- Auto Mode Panel (SA-15 Tor) -->
+                <div class="auto-mode-panel" id="autoModePanel" style="display:none;">
+                    <h3>Autonomous Mode</h3>
+                    <div class="auto-mode-controls">
+                        <label class="toggle">
+                            <input type="checkbox" id="autoModeToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Full Auto Mode</span>
+                        </label>
+                    </div>
+                    <div class="auto-mode-status">
+                        <span class="auto-mode-label">Mode:</span>
+                        <span class="auto-mode-value" id="autoModeStatus">MANUAL</span>
+                    </div>
+                    <div class="auto-mode-hint">
+                        <small>System will automatically detect, track, and engage targets</small>
                     </div>
                 </div>
 
@@ -585,11 +668,20 @@
             <div class="form-group">
                 <label for="modalSystemSelect">System Type:</label>
                 <select id="modalSystemSelect">
-                    <option value="SA2">SA-2 Guideline</option>
-                    <option value="SA3">SA-3 Goa</option>
-                    <option value="SA6">SA-6 Gainful</option>
-                    <option value="SA10">SA-10 Grumble</option>
-                    <option value="SA11">SA-11 Gadfly</option>
+                    <optgroup label="Long Range">
+                        <option value="SA2">SA-2 Guideline</option>
+                        <option value="SA3">SA-3 Goa</option>
+                        <option value="SA10">SA-10 Grumble</option>
+                    </optgroup>
+                    <optgroup label="Medium Range">
+                        <option value="SA6">SA-6 Gainful</option>
+                        <option value="SA11">SA-11 Gadfly</option>
+                    </optgroup>
+                    <optgroup label="Short Range">
+                        <option value="SA8">SA-8 Gecko</option>
+                        <option value="SA15">SA-15 Gauntlet</option>
+                        <option value="SA19">SA-19 Grison</option>
+                    </optgroup>
                 </select>
             </div>
             <div class="form-group">
