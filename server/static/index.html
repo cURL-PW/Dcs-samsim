@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eastern SAM Simulator - DCS World</title>
+    <link rel="stylesheet" href="css/samsim.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 id="systemTitle">SAM Simulator</h1>
+                <span class="subtitle" id="systemSubtitle">Select a SAM System</span>
+            </div>
+            <div class="header-center">
+                <div class="system-selector-header">
+                    <select id="samSystemSelect" class="sam-select">
+                        <option value="">-- Select System --</option>
+                        <optgroup label="Eastern - Long Range">
+                            <option value="SA2">SA-2 Guideline (S-75)</option>
+                            <option value="SA3">SA-3 Goa (S-125)</option>
+                            <option value="SA10">SA-10 Grumble (S-300PS)</option>
+                        </optgroup>
+                        <optgroup label="Eastern - Medium Range">
+                            <option value="SA6">SA-6 Gainful (2K12 Kub)</option>
+                            <option value="SA11">SA-11 Gadfly (9K37 Buk)</option>
+                        </optgroup>
+                        <optgroup label="Eastern - Short Range">
+                            <option value="SA8">SA-8 Gecko (9K33 Osa)</option>
+                            <option value="SA15">SA-15 Gauntlet (9K330 Tor)</option>
+                            <option value="SA19">SA-19 Grison (2K22 Tunguska)</option>
+                        </optgroup>
+                        <optgroup label="Western - Long Range">
+                            <option value="PATRIOT">MIM-104 Patriot</option>
+                        </optgroup>
+                        <optgroup label="Western - Medium Range">
+                            <option value="HAWK">MIM-23 HAWK</option>
+                        </optgroup>
+                        <optgroup label="Western - Short Range">
+                            <option value="ROLAND">Roland</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="system-state" id="systemStateDisplay">
+                    <span class="state-label">STATUS:</span>
+                    <span class="state-value" id="systemState">OFFLINE</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot disconnected"></span>
+                    <span class="status-text">Disconnected</span>
+                </div>
+                <div class="mission-time" id="missionTime">00:00:00</div>
+            </div>
+        </header>
+
+        <!-- C2 Command Bar -->
+        <div class="c2-bar" id="c2Bar">
+            <div class="c2-bar-left">
+                <span class="c2-label">C2 STATUS:</span>
+                <span class="c2-value" id="c2Status">OFFLINE</span>
+                <div class="c2-policy">
+                    <label>Policy:</label>
+                    <select id="engagementPolicy" class="c2-select">
+                        <option value="WEAPONS_HOLD">WEAPONS HOLD</option>
+                        <option value="WEAPONS_TIGHT">WEAPONS TIGHT</option>
+                        <option value="WEAPONS_FREE">WEAPONS FREE</option>
+                    </select>
+                </div>
+                <label class="toggle c2-toggle">
+                    <input type="checkbox" id="autoAssignToggle">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Auto Assign</span>
+                </label>
+            </div>
+            <div class="c2-bar-center">
+                <div class="c2-sites" id="c2SitesList">
+                    <!-- Site status indicators will be added dynamically -->
+                </div>
+            </div>
+            <div class="c2-bar-right">
+                <span class="c2-tracks-label">Fused Tracks:</span>
+                <span class="c2-tracks-count" id="fusedTrackCount">0</span>
+                <button id="btnC2Panel" class="btn btn-small">C2 Panel</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content-enhanced">
+            <!-- Left Column - Radar Displays -->
+            <div class="radar-column">
+                <!-- Early Warning / Search Radar -->
+                <section class="radar-panel ew-panel">
+                    <div class="panel-header">
+                        <span class="panel-title" id="ewRadarTitle">Search Radar</span>
+                        <div class="radar-mode" id="ewModeDisplay">OFF</div>
+                    </div>
+                    <div class="radar-container ew-container">
+                        <canvas id="ewScope" width="400" height="400"></canvas>
+                    </div>
+                    <div class="radar-controls compact">
+                        <div class="control-group">
+                            <label>Mode</label>
+                            <select id="ewMode">
+                                <option value="0">OFF</option>
+                                <option value="1">STANDBY</option>
+                                <option value="2">SEARCH</option>
+                                <option value="3">SECTOR</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Range</label>
+                            <select id="ewRange">
+                                <option value="50">50 km</option>
+                                <option value="100">100 km</option>
+                                <option value="150">150 km</option>
+                                <option value="200">200 km</option>
+                                <option value="300">300 km</option>
+                            </select>
+                        </div>
+                        <div class="ew-antenna-display">
+                            <span>Ant: </span>
+                            <span id="ewAntennaAz">0</span>°
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Fire Control / Track Radar -->
+                <section class="radar-panel fc-panel">
+                    <div class="panel-header">
+                        <span class="panel-title" id="fcRadarTitle">Fire Control Radar</span>
+                        <div class="radar-mode" id="fcModeDisplay">OFF</div>
+                    </div>
+                    <div class="fc-displays">
+                        <div class="ppi-display">
+                            <canvas id="fcScope" width="350" height="350"></canvas>
+                        </div>
+                        <div class="scope-displays">
+                            <!-- A-Scope (Range) -->
+                            <div class="a-scope-container">
+                                <div class="scope-label">A-SCOPE (Range)</div>
+                                <canvas id="aScope" width="200" height="120"></canvas>
+                            </div>
+                            <!-- B-Scope (Range-Elevation) -->
+                            <div class="b-scope-container">
+                                <div class="scope-label">B-SCOPE (Elevation)</div>
+                                <canvas id="bScope" width="200" height="150"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="radar-controls compact">
+                        <div class="control-group">
+                            <label>Mode</label>
+                            <select id="fcMode">
+                                <option value="0">OFF</option>
+                                <option value="1">STANDBY</option>
+                                <option value="2">ACQUISITION</option>
+                                <option value="3">TRACK</option>
+                                <option value="4">GUIDANCE</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Range</label>
+                            <select id="fcRange">
+                                <option value="30">30 km</option>
+                                <option value="50">50 km</option>
+                                <option value="65">65 km</option>
+                                <option value="100">100 km</option>
+                            </select>
+                        </div>
+                        <div class="antenna-controls">
+                            <div class="control-group small">
+                                <label>Az</label>
+                                <input type="number" id="fcAz" min="0" max="360" value="0" step="1">
+                            </div>
+                            <div class="control-group small">
+                                <label>El</label>
+                                <input type="number" id="fcEl" min="0" max="85" value="5" step="1">
+                            </div>
+                            <button id="btnCommandAntenna" class="btn btn-small">CMD</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Center Column - Target & Engagement -->
+            <div class="control-column">
+                <!-- Site Selection -->
+                <div class="site-selector">
+                    <label>Site:</label>
+                    <select id="siteSelect">
+                        <option value="">-- Select --</option>
+                    </select>
+                    <button id="initSiteBtn" class="btn btn-small btn-primary">+</button>
+                </div>
+
+                <!-- System Controls -->
+                <div class="system-controls">
+                    <h3>Power Control</h3>
+                    <div class="button-row">
+                        <button id="btnPowerOn" class="btn btn-power">STARTUP</button>
+                        <button id="btnPowerOff" class="btn btn-standby">SHUTDOWN</button>
+                    </div>
+                    <div class="indicator-row" id="indicatorRow">
+                        <div class="indicator" id="indPower">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">PWR</span>
+                        </div>
+                        <div class="indicator" id="indEW">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">EW</span>
+                        </div>
+                        <div class="indicator" id="indFC">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">FC</span>
+                        </div>
+                        <div class="indicator" id="indTrack">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">TRK</span>
+                        </div>
+                        <div class="indicator" id="indGuide">
+                            <span class="indicator-light"></span>
+                            <span class="indicator-label">GDE</span>
+                        </div>
+                        <div class="indicator" id="indOptical" style="display:none;">
+                            <span class="indicator-light optical"></span>
+                            <span class="indicator-label">OPT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optical Tracking Panel (SA-8, SA-19) -->
+                <div class="optical-panel" id="opticalPanel" style="display:none;">
+                    <h3>Optical Tracking</h3>
+                    <div class="optical-status-display">
+                        <div class="optical-indicator">
+                            <span class="optical-label">Status:</span>
+                            <span class="optical-value" id="opticalStatus">STANDBY</span>
+                        </div>
+                    </div>
+                    <div class="optical-controls">
+                        <button id="btnOpticalActivate" class="btn btn-small">ACTIVATE</button>
+                        <button id="btnOpticalDeactivate" class="btn btn-small">DEACTIVATE</button>
+                    </div>
+                    <div class="optical-hint">
+                        <small>EMCON mode - passive tracking without radar emissions</small>
+                    </div>
+                </div>
+
+                <!-- Gun Panel (SA-19 Tunguska) -->
+                <div class="gun-panel" id="gunPanel" style="display:none;">
+                    <h3>Gun System (2x 30mm)</h3>
+                    <div class="gun-status-display">
+                        <div class="gun-indicator">
+                            <span class="gun-label">Status:</span>
+                            <span class="gun-value gun-status" id="gunStatus">SAFE</span>
+                        </div>
+                        <div class="gun-indicator">
+                            <span class="gun-label">Rounds:</span>
+                            <span class="gun-value" id="gunRounds">1000 / 1000</span>
+                        </div>
+                    </div>
+                    <div class="weapon-mode-selector">
+                        <label>Weapon Mode:</label>
+                        <select id="weaponModeSelect" class="weapon-mode-select">
+                            <option value="SAFE">SAFE</option>
+                            <option value="MISSILE_ONLY">MISSILE ONLY</option>
+                            <option value="GUN_ONLY">GUN ONLY</option>
+                            <option value="COMBINED">COMBINED</option>
+                            <option value="AUTO">AUTO</option>
+                        </select>
+                    </div>
+                    <div class="gun-controls">
+                        <button id="btnGunFire" class="btn btn-fire" disabled>FIRE GUN</button>
+                        <button id="btnGunCeasefire" class="btn btn-small">CEASEFIRE</button>
+                    </div>
+                    <div class="gun-engagement-envelope">
+                        <span class="envelope-label">Gun Range:</span>
+                        <span class="envelope-value">200m - 4000m</span>
+                    </div>
+                </div>
+
+                <!-- Auto Mode Panel (SA-15 Tor) -->
+                <div class="auto-mode-panel" id="autoModePanel" style="display:none;">
+                    <h3>Autonomous Mode</h3>
+                    <div class="auto-mode-controls">
+                        <label class="toggle">
+                            <input type="checkbox" id="autoModeToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Full Auto Mode</span>
+                        </label>
+                    </div>
+                    <div class="auto-mode-status">
+                        <span class="auto-mode-label">Mode:</span>
+                        <span class="auto-mode-value" id="autoModeStatus">MANUAL</span>
+                    </div>
+                    <div class="auto-mode-hint">
+                        <small>System will automatically detect, track, and engage targets</small>
+                    </div>
+                </div>
+
+                <!-- Multi-Channel Display (for SA-10/SA-11) -->
+                <div class="channel-panel" id="channelPanel" style="display:none;">
+                    <h3>Engagement Channels</h3>
+                    <div class="channel-grid" id="channelGrid">
+                    </div>
+                </div>
+
+                <!-- EW Target List -->
+                <div class="target-list-container">
+                    <h3 id="ewTargetListTitle">Search Radar Tracks</h3>
+                    <div class="target-list" id="ewTargetList">
+                        <div class="no-targets">No tracks</div>
+                    </div>
+                </div>
+
+                <!-- Tracked Target Info -->
+                <div class="tracked-target" id="trackedTargetPanel">
+                    <h3 id="fcTrackTitle">Fire Control Track</h3>
+                    <div class="target-data" id="trackedTargetData">
+                        <div class="data-grid">
+                            <div class="data-cell">
+                                <span class="data-label">ID</span>
+                                <span class="data-value" id="tgtId">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Range</span>
+                                <span class="data-value" id="tgtRange">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Azimuth</span>
+                                <span class="data-value" id="tgtAzimuth">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Elev</span>
+                                <span class="data-value" id="tgtElevation">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Alt</span>
+                                <span class="data-value" id="tgtAltitude">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Speed</span>
+                                <span class="data-value" id="tgtSpeed">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Heading</span>
+                                <span class="data-value" id="tgtHeading">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Closure</span>
+                                <span class="data-value" id="tgtClosure">---</span>
+                            </div>
+                            <div class="data-cell">
+                                <span class="data-label">Cross Ang</span>
+                                <span class="data-value" id="tgtCrossing">---</span>
+                            </div>
+                            <div class="data-cell wide">
+                                <span class="data-label">Track Quality</span>
+                                <div class="quality-bar">
+                                    <div class="quality-fill" id="trackQualityBar"></div>
+                                </div>
+                                <span class="data-value" id="trackQuality">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement Controls -->
+                <div class="engagement-controls">
+                    <h3>Engagement Control</h3>
+                    <div class="button-row">
+                        <button id="btnDesignate" class="btn btn-designate">DESIGNATE</button>
+                        <button id="btnDropTrack" class="btn btn-drop">DROP TRK</button>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="autoTrackToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Auto Track</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="engAuthToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Weapons Free</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ECCM Controls -->
+                <div class="eccm-controls">
+                    <h3>ECCM Controls</h3>
+                    <div class="eccm-grid">
+                        <div class="eccm-item">
+                            <label class="toggle">
+                                <input type="checkbox" id="freqAgilityToggle">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Freq Agility</span>
+                            </label>
+                        </div>
+                        <div class="eccm-item">
+                            <label class="toggle">
+                                <input type="checkbox" id="mtiToggle">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">MTI</span>
+                            </label>
+                        </div>
+                        <div class="eccm-item">
+                            <label class="toggle">
+                                <input type="checkbox" id="sloBlankingToggle">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">SLO Blank</span>
+                            </label>
+                        </div>
+                        <div class="eccm-item slider-item">
+                            <label>STC</label>
+                            <input type="range" id="stcSlider" min="0" max="100" value="50">
+                            <span id="stcValue">50%</span>
+                        </div>
+                        <div class="eccm-item slider-item">
+                            <label>FTC</label>
+                            <input type="range" id="ftcSlider" min="0" max="100" value="30">
+                            <span id="ftcValue">30%</span>
+                        </div>
+                        <div class="eccm-item slider-item">
+                            <label>Gain</label>
+                            <input type="range" id="gainSlider" min="0" max="100" value="70">
+                            <span id="gainValue">70%</span>
+                        </div>
+                    </div>
+                    <div class="ecm-status" id="ecmStatusPanel">
+                        <div class="ecm-indicator">
+                            <span class="ecm-label">JAMMING:</span>
+                            <span class="ecm-value" id="jammingStatus">NONE</span>
+                        </div>
+                        <div class="ecm-indicator">
+                            <span class="ecm-label">J/S Ratio:</span>
+                            <span class="ecm-value" id="jsRatio">--- dB</span>
+                        </div>
+                        <div class="ecm-indicator">
+                            <span class="ecm-label">Burn-through:</span>
+                            <span class="ecm-value" id="burnThrough">--- km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IFF Panel -->
+                <div class="iff-panel">
+                    <h3>IFF Interrogator</h3>
+                    <div class="iff-controls">
+                        <div class="iff-mode-selector">
+                            <label>Mode:</label>
+                            <select id="iffModeSelect">
+                                <option value="0">OFF</option>
+                                <option value="1">Mode 1</option>
+                                <option value="2">Mode 2</option>
+                                <option value="3">Mode 3/A</option>
+                                <option value="4">Mode C</option>
+                                <option value="5">Mode 4</option>
+                            </select>
+                        </div>
+                        <button id="btnIffInterrogate" class="btn btn-small">INTERR</button>
+                    </div>
+                    <div class="iff-response" id="iffResponse">
+                        <span class="iff-status">---</span>
+                    </div>
+                </div>
+
+                <!-- Terrain Effects Panel -->
+                <div class="terrain-panel">
+                    <h3>Terrain Effects</h3>
+                    <div class="terrain-controls">
+                        <label class="toggle">
+                            <input type="checkbox" id="terrainMaskingToggle" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Terrain Masking</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="clutterSimToggle" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Ground Clutter</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="multipathToggle" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Multipath</span>
+                        </label>
+                    </div>
+                    <div class="terrain-status">
+                        <div class="terrain-indicator">
+                            <span class="terrain-label">Weather:</span>
+                            <span class="terrain-value" id="weatherStatus">Clear</span>
+                        </div>
+                        <div class="terrain-indicator">
+                            <span class="terrain-label">Clutter:</span>
+                            <span class="terrain-value" id="clutterLevel">Low</span>
+                        </div>
+                        <div class="terrain-indicator">
+                            <span class="terrain-label">Masked:</span>
+                            <span class="terrain-value" id="maskedCount">0 tracks</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training Panel -->
+                <div class="training-panel" id="trainingPanel">
+                    <h3>Training Mode</h3>
+                    <div class="training-controls">
+                        <select id="scenarioSelect" class="scenario-select">
+                            <option value="">-- Select Scenario --</option>
+                            <optgroup label="Beginner">
+                                <option value="basic_intercept">Basic Intercept</option>
+                                <option value="two_targets">Two Target Engagement</option>
+                            </optgroup>
+                            <optgroup label="Intermediate">
+                                <option value="ecm_target">ECM Environment</option>
+                                <option value="low_flyer">Low Altitude Intercept</option>
+                            </optgroup>
+                            <optgroup label="Advanced">
+                                <option value="saturation">Saturation Attack</option>
+                                <option value="mixed_raid">Mixed Raid</option>
+                            </optgroup>
+                            <optgroup label="Expert">
+                                <option value="sead_defense">SEAD Defense</option>
+                            </optgroup>
+                        </select>
+                        <div class="training-buttons">
+                            <button id="btnStartTraining" class="btn btn-start">START</button>
+                            <button id="btnStopTraining" class="btn btn-stop" disabled>STOP</button>
+                        </div>
+                    </div>
+                    <div class="training-status" id="trainingStatus">
+                        <div class="training-info">
+                            <span class="training-label">Status:</span>
+                            <span class="training-value" id="trainingState">READY</span>
+                        </div>
+                        <div class="training-info">
+                            <span class="training-label">Time:</span>
+                            <span class="training-value" id="trainingTime">00:00</span>
+                        </div>
+                        <div class="training-info">
+                            <span class="training-label">Targets:</span>
+                            <span class="training-value" id="trainingTargets">0 / 0</span>
+                        </div>
+                    </div>
+                    <div class="training-hint" id="trainingHint">
+                        <span class="hint-icon">💡</span>
+                        <span class="hint-text" id="hintText">Select a scenario to begin training</span>
+                    </div>
+                </div>
+
+                <!-- SEAD Threat Panel -->
+                <div class="sead-panel" id="seadPanel">
+                    <h3>SEAD Threat Warning</h3>
+                    <div class="threat-level-display">
+                        <div class="threat-indicator">
+                            <span class="threat-label">Threat Level:</span>
+                            <span class="threat-value" id="seadThreatLevel">LOW</span>
+                        </div>
+                        <div class="threat-score-bar">
+                            <div class="threat-score-fill" id="threatScoreFill"></div>
+                        </div>
+                    </div>
+                    <div class="arm-warning" id="armWarning" style="display:none;">
+                        <div class="arm-warning-icon">⚠</div>
+                        <div class="arm-warning-text">
+                            <span class="arm-type" id="armType">ARM INBOUND</span>
+                            <span class="arm-tti" id="armTTI">TTI: --s</span>
+                        </div>
+                    </div>
+                    <div class="jammer-status" id="jammerStatus">
+                        <div class="jammer-indicator">
+                            <span class="jammer-label">Jammers:</span>
+                            <span class="jammer-count" id="jammerCount">0</span>
+                        </div>
+                        <div class="jammer-effect">
+                            <span class="effect-label">Effect:</span>
+                            <span class="effect-value" id="jammerEffect">NONE</span>
+                        </div>
+                    </div>
+                    <div class="emcon-recommendation" id="emconRec">
+                        <div class="emcon-action">
+                            <span class="emcon-label">EMCON:</span>
+                            <span class="emcon-value" id="emconAction">NORMAL</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoEmconToggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Auto EMCON</span>
+                        </label>
+                    </div>
+                    <div class="damage-status" id="damageStatus">
+                        <div class="damage-indicator">
+                            <span class="damage-label">Site Status:</span>
+                            <span class="damage-value" id="siteStatus">OPERATIONAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multiplayer Panel -->
+                <div class="multiplayer-panel" id="multiplayerPanel">
+                    <h3>Multiplayer</h3>
+                    <div class="mp-session-info">
+                        <div class="session-indicator">
+                            <span class="session-label">Session:</span>
+                            <span class="session-value" id="mpSessionName">Not Connected</span>
+                        </div>
+                        <div class="session-indicator">
+                            <span class="session-label">Role:</span>
+                            <span class="session-value role-badge" id="mpPlayerRole">---</span>
+                        </div>
+                    </div>
+                    <div class="mp-players" id="mpPlayersPanel">
+                        <div class="mp-players-header">
+                            <span>Players Online:</span>
+                            <span id="mpPlayerCount">0</span>
+                        </div>
+                        <div class="mp-players-list" id="mpPlayersList">
+                            <!-- Player entries added dynamically -->
+                        </div>
+                    </div>
+                    <div class="mp-controls">
+                        <button id="btnJoinSession" class="btn btn-small btn-primary">Join</button>
+                        <button id="btnLeaveSession" class="btn btn-small" disabled>Leave</button>
+                    </div>
+                    <div class="mp-chat" id="mpChatPanel">
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Chat messages added dynamically -->
+                        </div>
+                        <div class="chat-input-row">
+                            <input type="text" id="chatInput" placeholder="Type message..." class="chat-input">
+                            <button id="btnSendChat" class="btn btn-small">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Firing Solution & Missiles -->
+            <div class="firing-column">
+                <!-- Firing Solution -->
+                <section class="firing-solution-panel">
+                    <h3>Firing Solution Computer</h3>
+                    <div class="firing-solution-display">
+                        <div class="launch-zone-indicator">
+                            <div class="zone-label">LAUNCH ZONE</div>
+                            <div class="zone-display" id="launchZoneDisplay">
+                                <span class="zone-text" id="launchZone">---</span>
+                            </div>
+                        </div>
+                        <div class="pk-display">
+                            <div class="pk-label">KILL PROBABILITY</div>
+                            <div class="pk-gauge">
+                                <div class="pk-fill" id="pkFill"></div>
+                                <span class="pk-value" id="pkValue">0%</span>
+                            </div>
+                        </div>
+                        <div class="solution-data">
+                            <div class="solution-row">
+                                <span class="solution-label">Time to Intercept:</span>
+                                <span class="solution-value" id="timeToIntercept">--- sec</span>
+                            </div>
+                            <div class="solution-row">
+                                <span class="solution-label">Missile Range:</span>
+                                <span class="solution-value" id="missileRange">---</span>
+                            </div>
+                            <div class="solution-row">
+                                <span class="solution-label">Min Range:</span>
+                                <span class="solution-value" id="minRange">---</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="launch-button-container">
+                        <button id="btnLaunch" class="btn btn-launch">
+                            <span class="launch-icon">&#9650;</span>
+                            LAUNCH MISSILE
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Missile Status -->
+                <section class="missile-panel">
+                    <h3 id="missileTitle">Missiles</h3>
+                    <div class="missile-display">
+                        <div class="missile-count">
+                            <span class="missile-number" id="missilesReady">0</span>
+                            <span class="missile-label" id="missilesTotal">/ 0 Ready</span>
+                        </div>
+                        <div class="missile-indicators" id="missileIndicators">
+                        </div>
+                    </div>
+                    <div class="missiles-in-flight">
+                        <span class="label">In Flight:</span>
+                        <span class="value" id="missilesInFlight">0</span>
+                    </div>
+                    <div class="active-missiles" id="activeMissiles">
+                        <!-- Active missile tracking entries will be added dynamically -->
+                    </div>
+                </section>
+
+                <!-- Kill Assessment -->
+                <section class="kill-assessment-panel">
+                    <h3>Kill Assessment</h3>
+                    <div class="kill-assessment-display" id="killAssessmentDisplay">
+                        <div class="assessment-status" id="assessmentStatus">---</div>
+                        <div class="assessment-details" id="assessmentDetails">
+                            <div class="detail-row">
+                                <span class="detail-label">Last Engagement:</span>
+                                <span class="detail-value" id="lastEngResult">---</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Miss Distance:</span>
+                                <span class="detail-value" id="missDistance">---</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kill-history" id="killHistory">
+                        <!-- Kill/miss history entries -->
+                    </div>
+                </section>
+
+                <!-- Event Log -->
+                <section class="event-log-panel">
+                    <h3>Event Log</h3>
+                    <div class="event-log" id="eventLog">
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer / Status Bar -->
+        <footer class="status-bar">
+            <div class="status-item">
+                <span class="label">System:</span>
+                <span class="value" id="currentSystem">None</span>
+            </div>
+            <div class="status-item">
+                <span class="label">WebSocket:</span>
+                <span class="value" id="wsStatus">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span class="label">DCS:</span>
+                <span class="value" id="dcsStatus">Not Connected</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Update Rate:</span>
+                <span class="value" id="updateRate">-- Hz</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Last Update:</span>
+                <span class="value" id="lastUpdate">--:--:--</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Init Site Modal -->
+    <div class="modal" id="initSiteModal">
+        <div class="modal-content">
+            <h2>Initialize SAM Site</h2>
+            <div class="form-group">
+                <label for="modalSystemSelect">System Type:</label>
+                <select id="modalSystemSelect">
+                    <optgroup label="Eastern - Long Range">
+                        <option value="SA2">SA-2 Guideline</option>
+                        <option value="SA3">SA-3 Goa</option>
+                        <option value="SA10">SA-10 Grumble</option>
+                    </optgroup>
+                    <optgroup label="Eastern - Medium Range">
+                        <option value="SA6">SA-6 Gainful</option>
+                        <option value="SA11">SA-11 Gadfly</option>
+                    </optgroup>
+                    <optgroup label="Eastern - Short Range">
+                        <option value="SA8">SA-8 Gecko</option>
+                        <option value="SA15">SA-15 Gauntlet</option>
+                        <option value="SA19">SA-19 Grison</option>
+                    </optgroup>
+                    <optgroup label="Western - Long Range">
+                        <option value="PATRIOT">MIM-104 Patriot</option>
+                    </optgroup>
+                    <optgroup label="Western - Medium Range">
+                        <option value="HAWK">MIM-23 HAWK</option>
+                    </optgroup>
+                    <optgroup label="Western - Short Range">
+                        <option value="ROLAND">Roland</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="newSiteId">Site ID:</label>
+                <input type="text" id="newSiteId" placeholder="e.g., ALPHA">
+            </div>
+            <div class="form-group">
+                <label for="groupName">DCS Group Name:</label>
+                <input type="text" id="groupName" placeholder="e.g., SA-2 Site 1">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="confirmInitSite">Initialize</button>
+                <button class="btn btn-secondary" id="cancelInitSite">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debrief Modal -->
+    <div class="modal" id="debriefModal">
+        <div class="modal-content debrief-modal">
+            <h2 id="debriefTitle">Training Debrief</h2>
+            <div class="debrief-header">
+                <div class="debrief-grade" id="debriefGrade">
+                    <span class="grade-letter">A</span>
+                    <span class="grade-text">Excellent</span>
+                </div>
+                <div class="debrief-score">
+                    <span class="score-label">Score:</span>
+                    <span class="score-value" id="debriefScore">0</span>
+                </div>
+            </div>
+            <div class="debrief-sections" id="debriefSections">
+                <!-- Sections added dynamically -->
+            </div>
+            <div class="debrief-timeline" id="debriefTimeline">
+                <h4>Event Timeline</h4>
+                <div class="timeline-content" id="timelineContent">
+                    <!-- Timeline events added dynamically -->
+                </div>
+            </div>
+            <div class="debrief-recommendations" id="debriefRecommendations">
+                <h4>Recommendations</h4>
+                <ul id="recommendationsList">
+                    <!-- Recommendations added dynamically -->
+                </ul>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="closeDebrief">Close</button>
+                <button class="btn btn-secondary" id="retryScenario">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/samsim.js"></script>
+</body>
+</html>

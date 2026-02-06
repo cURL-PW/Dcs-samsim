@@ -1,0 +1,3 @@
+# SAMSIM Server Requirements
+websockets>=12.0
+aiohttp>=3.9.0
