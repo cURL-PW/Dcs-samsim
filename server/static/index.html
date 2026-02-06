@@ -412,6 +412,53 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Training Panel -->
+                <div class="training-panel" id="trainingPanel">
+                    <h3>Training Mode</h3>
+                    <div class="training-controls">
+                        <select id="scenarioSelect" class="scenario-select">
+                            <option value="">-- Select Scenario --</option>
+                            <optgroup label="Beginner">
+                                <option value="basic_intercept">Basic Intercept</option>
+                                <option value="two_targets">Two Target Engagement</option>
+                            </optgroup>
+                            <optgroup label="Intermediate">
+                                <option value="ecm_target">ECM Environment</option>
+                                <option value="low_flyer">Low Altitude Intercept</option>
+                            </optgroup>
+                            <optgroup label="Advanced">
+                                <option value="saturation">Saturation Attack</option>
+                                <option value="mixed_raid">Mixed Raid</option>
+                            </optgroup>
+                            <optgroup label="Expert">
+                                <option value="sead_defense">SEAD Defense</option>
+                            </optgroup>
+                        </select>
+                        <div class="training-buttons">
+                            <button id="btnStartTraining" class="btn btn-start">START</button>
+                            <button id="btnStopTraining" class="btn btn-stop" disabled>STOP</button>
+                        </div>
+                    </div>
+                    <div class="training-status" id="trainingStatus">
+                        <div class="training-info">
+                            <span class="training-label">Status:</span>
+                            <span class="training-value" id="trainingState">READY</span>
+                        </div>
+                        <div class="training-info">
+                            <span class="training-label">Time:</span>
+                            <span class="training-value" id="trainingTime">00:00</span>
+                        </div>
+                        <div class="training-info">
+                            <span class="training-label">Targets:</span>
+                            <span class="training-value" id="trainingTargets">0 / 0</span>
+                        </div>
+                    </div>
+                    <div class="training-hint" id="trainingHint">
+                        <span class="hint-icon">💡</span>
+                        <span class="hint-text" id="hintText">Select a scenario to begin training</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Right Column - Firing Solution & Missiles -->
@@ -556,6 +603,42 @@
             <div class="modal-buttons">
                 <button class="btn btn-primary" id="confirmInitSite">Initialize</button>
                 <button class="btn btn-secondary" id="cancelInitSite">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debrief Modal -->
+    <div class="modal" id="debriefModal">
+        <div class="modal-content debrief-modal">
+            <h2 id="debriefTitle">Training Debrief</h2>
+            <div class="debrief-header">
+                <div class="debrief-grade" id="debriefGrade">
+                    <span class="grade-letter">A</span>
+                    <span class="grade-text">Excellent</span>
+                </div>
+                <div class="debrief-score">
+                    <span class="score-label">Score:</span>
+                    <span class="score-value" id="debriefScore">0</span>
+                </div>
+            </div>
+            <div class="debrief-sections" id="debriefSections">
+                <!-- Sections added dynamically -->
+            </div>
+            <div class="debrief-timeline" id="debriefTimeline">
+                <h4>Event Timeline</h4>
+                <div class="timeline-content" id="timelineContent">
+                    <!-- Timeline events added dynamically -->
+                </div>
+            </div>
+            <div class="debrief-recommendations" id="debriefRecommendations">
+                <h4>Recommendations</h4>
+                <ul id="recommendationsList">
+                    <!-- Recommendations added dynamically -->
+                </ul>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="closeDebrief">Close</button>
+                <button class="btn btn-secondary" id="retryScenario">Retry</button>
             </div>
         </div>
     </div>

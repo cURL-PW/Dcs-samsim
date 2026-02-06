@@ -46,6 +46,13 @@ class SAMSimClient {
         this.clutterLevel = 'Low';
         this.weatherStatus = 'Clear';
 
+        // Training mode
+        this.trainingActive = false;
+        this.trainingState = 'READY';
+        this.trainingStartTime = 0;
+        this.currentScenario = null;
+        this.trainingMetrics = null;
+
         // System configurations
         this.systemConfigs = {
             SA2: {
@@ -257,6 +264,16 @@ class SAMSimClient {
             this.multipathSim = e.target.checked;
             this.sendTerrainSetting('multipath', e.target.checked);
         });
+
+        // Training controls
+        document.getElementById('scenarioSelect')?.addEventListener('change', (e) => {
+            this.currentScenario = e.target.value;
+            this.updateTrainingHint();
+        });
+        document.getElementById('btnStartTraining')?.addEventListener('click', () => this.startTraining());
+        document.getElementById('btnStopTraining')?.addEventListener('click', () => this.stopTraining());
+        document.getElementById('closeDebrief')?.addEventListener('click', () => this.hideDebriefModal());
+        document.getElementById('retryScenario')?.addEventListener('click', () => this.retryScenario());
     }
 
     selectSystem(systemType) {
@@ -395,6 +412,10 @@ class SAMSimClient {
             this.handleC2Update(data);
         } else if (data.type === 'terrain_update') {
             this.handleTerrainUpdate(data);
+        } else if (data.type === 'training_update') {
+            this.handleTrainingUpdate(data);
+        } else if (data.type === 'training_complete') {
+            this.handleTrainingComplete(data);
         } else if (data.systemType) {
             // Direct state update
             this.state = data;
@@ -494,6 +515,33 @@ class SAMSimClient {
             this.clutterLevel = data.clutterLevel;
         }
         this.updateTerrainDisplay();
+    }
+
+    handleTrainingUpdate(data) {
+        this.trainingState = data.state || 'RUNNING';
+        this.trainingMetrics = data.metrics;
+        this.updateTrainingDisplay(data);
+    }
+
+    handleTrainingComplete(data) {
+        this.trainingActive = false;
+        this.trainingState = data.result === 'SUCCESS' ? 'COMPLETE' : 'FAILED';
+
+        // Update UI
+        document.getElementById('btnStartTraining').disabled = false;
+        document.getElementById('btnStopTraining').disabled = true;
+
+        this.updateTrainingDisplay({
+            state: this.trainingState,
+            metrics: data.summary,
+            elapsedTime: data.duration
+        });
+
+        // Show debrief modal
+        this.showDebriefModal(data.debrief);
+
+        this.log(`Training ${this.trainingState}: Score ${data.summary?.score || 0}`,
+            this.trainingState === 'COMPLETE' ? 'success' : 'warning');
     }
 
     updateDisplay() {
@@ -1709,6 +1757,155 @@ class SAMSimClient {
             setting: setting,
             value: value
         });
+    }
+
+    // Training methods
+    startTraining() {
+        if (!this.currentScenario) {
+            this.log('Select a scenario first', 'warning');
+            return;
+        }
+
+        this.sendCommand({
+            type: 'TRAINING_START',
+            scenarioId: this.currentScenario
+        });
+
+        this.trainingActive = true;
+        this.trainingState = 'RUNNING';
+        this.trainingStartTime = Date.now();
+
+        document.getElementById('btnStartTraining').disabled = true;
+        document.getElementById('btnStopTraining').disabled = false;
+
+        this.log(`Training started: ${this.currentScenario}`, 'info');
+    }
+
+    stopTraining() {
+        this.sendCommand({ type: 'TRAINING_STOP' });
+
+        this.trainingActive = false;
+        this.trainingState = 'STOPPED';
+
+        document.getElementById('btnStartTraining').disabled = false;
+        document.getElementById('btnStopTraining').disabled = true;
+
+        this.log('Training stopped', 'info');
+    }
+
+    updateTrainingDisplay(data) {
+        const stateEl = document.getElementById('trainingState');
+        const timeEl = document.getElementById('trainingTime');
+        const targetsEl = document.getElementById('trainingTargets');
+
+        if (stateEl) {
+            stateEl.textContent = data.state;
+            stateEl.className = 'training-value ' + data.state?.toLowerCase();
+        }
+
+        if (timeEl && data.elapsedTime !== undefined) {
+            const mins = Math.floor(data.elapsedTime / 60);
+            const secs = Math.floor(data.elapsedTime % 60);
+            timeEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        if (targetsEl && data.metrics) {
+            targetsEl.textContent = `${data.metrics.targetsDestroyed || 0} / ${data.metrics.targetsDetected || 0}`;
+        }
+
+        // Update hint if provided
+        if (data.hint) {
+            document.getElementById('hintText').textContent = data.hint;
+        }
+    }
+
+    updateTrainingHint() {
+        const hints = {
+            'basic_intercept': 'Single high-altitude target. Focus on proper engagement sequence.',
+            'two_targets': 'Sequential engagement of two targets. Manage your time.',
+            'ecm_target': 'Target is using ECM. Use ECCM features and wait for burn-through.',
+            'low_flyer': 'Low altitude target. Watch for terrain masking.',
+            'saturation': 'Multiple simultaneous targets. Prioritize and manage missiles.',
+            'mixed_raid': 'Fighter escort with strike package. Strike aircraft are priority.',
+            'sead_defense': 'SEAD attack with ARMs. Use emission control wisely.'
+        };
+
+        const hint = hints[this.currentScenario] || 'Select a scenario to begin training';
+        document.getElementById('hintText').textContent = hint;
+    }
+
+    showDebriefModal(debrief) {
+        const modal = document.getElementById('debriefModal');
+        if (!modal || !debrief) return;
+
+        // Update grade
+        const gradeEl = modal.querySelector('.grade-letter');
+        const gradeTextEl = modal.querySelector('.grade-text');
+        if (gradeEl) {
+            gradeEl.textContent = debrief.grade;
+            gradeEl.className = 'grade-letter grade-' + debrief.grade.toLowerCase().charAt(0);
+        }
+        if (gradeTextEl) {
+            gradeTextEl.textContent = debrief.gradeText;
+        }
+
+        // Update score
+        const scoreEl = document.getElementById('debriefScore');
+        if (scoreEl) {
+            scoreEl.textContent = debrief.score;
+        }
+
+        // Update sections
+        const sectionsEl = document.getElementById('debriefSections');
+        if (sectionsEl && debrief.sections) {
+            sectionsEl.innerHTML = debrief.sections.map(section => `
+                <div class="debrief-section">
+                    <h4>${section.title}</h4>
+                    ${section.items.map(item => `
+                        <div class="debrief-item">
+                            <span class="debrief-item-label">${item.label}</span>
+                            <span class="debrief-item-value">${item.value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        // Update timeline
+        const timelineEl = document.getElementById('timelineContent');
+        if (timelineEl && debrief.timeline) {
+            timelineEl.innerHTML = debrief.timeline.map(event => {
+                let eventClass = '';
+                if (event.event.includes('HIT')) eventClass = 'event-hit';
+                else if (event.event.includes('MISS')) eventClass = 'event-miss';
+                else if (event.event.includes('LAUNCH')) eventClass = 'event-launch';
+                else if (event.event.includes('DETECT')) eventClass = 'event-detect';
+
+                return `
+                    <div class="timeline-event">
+                        <span class="timeline-time">${event.time}</span>
+                        <span class="timeline-event-type ${eventClass}">${event.event}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update recommendations
+        const recsEl = document.getElementById('recommendationsList');
+        if (recsEl && debrief.recommendations) {
+            recsEl.innerHTML = debrief.recommendations.map(rec => `<li>${rec}</li>`).join('');
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    hideDebriefModal() {
+        document.getElementById('debriefModal').style.display = 'none';
+    }
+
+    retryScenario() {
+        this.hideDebriefModal();
+        this.startTraining();
     }
 
     // UI helpers
