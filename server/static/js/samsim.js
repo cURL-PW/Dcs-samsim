@@ -169,6 +169,60 @@ class SAMSimClient {
                 hasGun: true,  // Combined gun/missile
                 gunRange: 4,
                 gunRounds: 1000
+            },
+
+            // === Western Systems ===
+            PATRIOT: {
+                name: 'MIM-104 Patriot',
+                designation: 'MIM-104',
+                side: 'WESTERN',
+                ewRadar: 'AN/MPQ-53 Phased Array',
+                fcRadar: 'AN/MPQ-53 Track',
+                missile: 'MIM-104C/F',
+                ewMaxRange: 170,
+                fcMaxRange: 100,
+                missileMaxRange: 160,
+                missileMinRange: 3,
+                missiles: 16,
+                multiChannel: true,
+                channels: 9,  // 9 simultaneous engagements
+                phasedArray: true,
+                tvm: true,  // Track-via-Missile
+                datalink: true
+            },
+            HAWK: {
+                name: 'MIM-23 HAWK',
+                designation: 'MIM-23B',
+                side: 'WESTERN',
+                ewRadar: 'AN/MPQ-50 PAR',
+                fcRadar: 'AN/MPQ-46 HPI',
+                missile: 'MIM-23B',
+                ewMaxRange: 100,
+                fcMaxRange: 60,
+                missileMaxRange: 40,
+                missileMinRange: 2,
+                missiles: 9,
+                multiChannel: false,
+                cwar: true,  // Has CWAR for low altitude
+                sarh: true   // Semi-Active Radar Homing
+            },
+            ROLAND: {
+                name: 'Roland',
+                designation: 'Roland 2/3',
+                side: 'WESTERN',
+                ewRadar: 'Search Radar',
+                fcRadar: 'Track Radar/Optical',
+                missile: 'Roland',
+                ewMaxRange: 18,
+                fcMaxRange: 16,
+                missileMaxRange: 8,
+                missileMinRange: 0.5,
+                missiles: 10,  // 2 on rail + 8 stowed
+                multiChannel: false,
+                optical: true,
+                saclos: true,  // SACLOS guidance
+                allInOne: true,
+                autoReload: true
             }
         };
 
@@ -427,6 +481,10 @@ class SAMSimClient {
                 case 'SA8': ewLabel.textContent = 'LR'; break;   // Land Roll
                 case 'SA15': ewLabel.textContent = '3D'; break;  // 3D Surveillance
                 case 'SA19': ewLabel.textContent = 'HS'; break;  // Hot Shot
+                // Western Systems
+                case 'PATRIOT': ewLabel.textContent = 'MPQ'; break;  // AN/MPQ-53
+                case 'HAWK': ewLabel.textContent = 'PAR'; break;     // Pulse Acquisition Radar
+                case 'ROLAND': ewLabel.textContent = 'SRC'; break;   // Search Radar
             }
         }
 
@@ -440,6 +498,10 @@ class SAMSimClient {
                 case 'SA8': fcLabel.textContent = 'TRK'; break;  // Track mode
                 case 'SA15': fcLabel.textContent = 'PA'; break;  // Phased Array
                 case 'SA19': fcLabel.textContent = 'TRK'; break; // Track mode
+                // Western Systems
+                case 'PATRIOT': fcLabel.textContent = 'TRK'; break;  // Track mode
+                case 'HAWK': fcLabel.textContent = 'HPI'; break;     // High Power Illuminator
+                case 'ROLAND': fcLabel.textContent = 'TRK'; break;   // Track/Optical
             }
         }
 
@@ -667,6 +729,16 @@ class SAMSimClient {
                 break;
             case 'SA19':
                 this.updateSA19Display();
+                break;
+            // Western Systems
+            case 'PATRIOT':
+                this.updatePatriotDisplay();
+                break;
+            case 'HAWK':
+                this.updateHAWKDisplay();
+                break;
+            case 'ROLAND':
+                this.updateRolandDisplay();
                 break;
             default:
                 this.updateGenericDisplay();
@@ -924,6 +996,170 @@ class SAMSimClient {
         if (state.track && state.track.valid) {
             this.updateTrackData(state.track);
         }
+    }
+
+    // === Western System Display Methods ===
+
+    updatePatriotDisplay() {
+        const state = this.state;
+
+        // AN/MPQ-53 Phased Array Radar
+        if (state.radar) {
+            document.getElementById('ewModeDisplay').textContent = state.radar.modeName || 'OFF';
+            document.getElementById('ewAntennaAz').textContent = Math.round(state.radar.azimuth || 0);
+            // Phased array doesn't rotate mechanically - show sector center
+            this.ewSweepAngle = state.radar.azimuth || 0;
+
+            document.getElementById('fcModeDisplay').textContent = state.radar.trackModeName || 'OFF';
+            this.fcSweepAngle = state.radar.azimuth || 0;
+
+            this.updateIndicator('indEW', state.radar.mode >= 2);
+            this.updateIndicator('indFC', state.radar.mode >= 3);
+        }
+
+        // ECS (Engagement Control Station) state
+        if (state.ecs) {
+            const ecsEl = document.getElementById('autoModeStatus');
+            if (ecsEl) {
+                ecsEl.textContent = state.ecs.operatorMode || 'MANUAL';
+                ecsEl.classList.toggle('active', state.ecs.operatorMode === 'AUTO');
+            }
+        }
+
+        // Track data (multiple tracks possible)
+        if (state.tracks && state.tracks.length > 0) {
+            this.updateTrackData(state.tracks[0]);
+            this.updateIndicator('indTrack', true);
+        }
+
+        // Engagements (up to 9 simultaneous)
+        if (state.engagements) {
+            this.updateIndicator('indGuide', state.engagements.length > 0);
+            // Update channel display for engagements
+            this.updateEngagements(state.engagements);
+        }
+
+        // Datalink status
+        if (state.datalink) {
+            const datalinkEl = document.getElementById('datalinkStatus');
+            if (datalinkEl) {
+                datalinkEl.textContent = state.datalink.active ? 'LINKED' : 'OFF';
+            }
+        }
+    }
+
+    updateHAWKDisplay() {
+        const state = this.state;
+
+        // AN/MPQ-50 PAR (Pulse Acquisition Radar)
+        if (state.par) {
+            document.getElementById('ewModeDisplay').textContent = state.par.modeName || 'OFF';
+            document.getElementById('ewAntennaAz').textContent = Math.round(state.par.azimuth || 0);
+            this.ewSweepAngle = state.par.azimuth || 0;
+            this.updateIndicator('indEW', state.par.mode >= 2);
+        }
+
+        // AN/MPQ-46 HPI (High Power Illuminator)
+        if (state.hpi) {
+            document.getElementById('fcModeDisplay').textContent = state.hpi.modeName || 'OFF';
+            this.fcSweepAngle = state.hpi.targetAzimuth || 0;
+            this.updateIndicator('indFC', state.hpi.mode >= 2);
+            this.updateIndicator('indGuide', state.hpi.illuminating);
+        }
+
+        // Track data
+        if (state.track && state.track.valid) {
+            this.updateTrackData(state.track);
+            this.updateIndicator('indTrack', true);
+        } else {
+            this.updateIndicator('indTrack', false);
+        }
+
+        // Battery status
+        if (state.batteryStatus) {
+            const statusEl = document.getElementById('systemState');
+            if (statusEl) {
+                statusEl.textContent = state.batteryStatus;
+            }
+        }
+    }
+
+    updateRolandDisplay() {
+        const state = this.state;
+
+        // Search Radar
+        if (state.searchRadar) {
+            document.getElementById('ewModeDisplay').textContent = state.searchRadar.modeName || 'OFF';
+            document.getElementById('ewAntennaAz').textContent = Math.round(state.searchRadar.azimuth || 0);
+            this.ewSweepAngle = state.searchRadar.azimuth || 0;
+            this.updateIndicator('indEW', state.searchRadar.mode >= 2);
+        }
+
+        // Tracker (Radar or Optical)
+        if (state.tracker) {
+            document.getElementById('fcModeDisplay').textContent =
+                (state.tracker.type === 'OPTICAL' ? 'OPT-' : 'RAD-') + (state.tracker.modeName || 'OFF');
+            this.fcSweepAngle = state.tracker.azimuth || 0;
+
+            this.updateIndicator('indFC', state.tracker.mode >= 2);
+            this.updateIndicator('indTrack', state.tracker.lockOn);
+            this.updateIndicator('indGuide', state.tracker.mode >= 4);
+
+            // Optical indicator
+            const opticalEl = document.getElementById('opticalStatus');
+            if (opticalEl) {
+                opticalEl.textContent = state.tracker.type === 'OPTICAL' ? 'OPTICAL' : 'RADAR';
+                opticalEl.classList.toggle('active', state.tracker.type === 'OPTICAL');
+            }
+        }
+
+        // Track data
+        if (state.track && state.track.valid) {
+            this.updateTrackData(state.track);
+        }
+
+        // EMCON status
+        if (state.emcon !== undefined) {
+            const emconEl = document.getElementById('autoModeStatus');
+            if (emconEl) {
+                emconEl.textContent = state.emcon ? 'EMCON' : 'NORMAL';
+                emconEl.classList.toggle('active', state.emcon);
+            }
+        }
+
+        // Reload status
+        if (state.missiles && state.missiles.reloading) {
+            const reloadEl = document.getElementById('reloadStatus');
+            if (reloadEl) {
+                const progress = Math.round((state.missiles.reloadProgress / 10) * 100);
+                reloadEl.textContent = `RELOAD ${progress}%`;
+            }
+        }
+    }
+
+    updateEngagements(engagements) {
+        // Update engagement channel display for multi-target systems
+        const grid = document.getElementById('channelGrid');
+        if (!grid) return;
+
+        engagements.forEach((eng, index) => {
+            const channelEl = document.getElementById(`channel${index + 1}`);
+            if (channelEl) {
+                const statusEl = channelEl.querySelector('.channel-status');
+                const targetEl = channelEl.querySelector('.channel-target');
+
+                if (statusEl) {
+                    statusEl.textContent = eng.state || 'IDLE';
+                    statusEl.className = 'channel-status ' + (eng.state || '').toLowerCase();
+                }
+                if (targetEl) {
+                    targetEl.textContent = eng.trackId ? `T${eng.trackId}` : '---';
+                }
+
+                channelEl.classList.toggle('tracking', eng.state === 'DESIGNATED');
+                channelEl.classList.toggle('guidance', eng.state === 'MISSILE_AWAY');
+            }
+        });
     }
 
     updateGenericDisplay() {
@@ -1918,6 +2154,19 @@ class SAMSimClient {
                 ewSystem = 'HOTSHOT';
                 fcSystem = 'HOTSHOT';  // Combined system
                 break;
+            // Western Systems
+            case 'PATRIOT':
+                ewSystem = 'MPQ53';
+                fcSystem = 'MPQ53';  // Same radar does both
+                break;
+            case 'HAWK':
+                ewSystem = 'PAR';
+                fcSystem = 'HPI';
+                break;
+            case 'ROLAND':
+                ewSystem = 'SEARCH';
+                fcSystem = 'TRACKER';
+                break;
             default:
                 ewSystem = 'P19';
                 fcSystem = 'SNR75';
@@ -1941,6 +2190,10 @@ class SAMSimClient {
             case 'SA8': modeType = 'LANDROLL_MODE'; break;
             case 'SA15': modeType = 'SURVEILLANCE_MODE'; break;
             case 'SA19': modeType = 'HOTSHOT_MODE'; break;
+            // Western Systems
+            case 'PATRIOT': modeType = 'RADAR_MODE'; break;
+            case 'HAWK': modeType = 'PAR_MODE'; break;
+            case 'ROLAND': modeType = 'SEARCH_MODE'; break;
             default: modeType = 'P19_MODE';
         }
 
@@ -1956,6 +2209,10 @@ class SAMSimClient {
             case 'SA8': modeType = 'LANDROLL_MODE'; break;
             case 'SA15': modeType = 'TRACKRADAR_MODE'; break;
             case 'SA19': modeType = 'HOTSHOT_MODE'; break;
+            // Western Systems
+            case 'PATRIOT': modeType = 'RADAR_MODE'; break;
+            case 'HAWK': modeType = 'HPI_MODE'; break;
+            case 'ROLAND': modeType = 'TRACKER_MODE'; break;
             default: modeType = 'SNR75_MODE';
         }
 

@@ -2,6 +2,8 @@
     Unified SAMSim Controller for DCS World
 
     Manages multiple SAM system simulations:
+
+    === Eastern Bloc ===
     Long Range:
     - SA-2 Guideline (S-75 Dvina)
     - SA-3 Goa (S-125 Neva/Pechora)
@@ -14,29 +16,42 @@
     - SA-15 Gauntlet (9K330 Tor)
     - SA-19 Grison (2K22 Tunguska)
 
+    === Western ===
+    Long Range:
+    - MIM-104 Patriot
+    Medium Range:
+    - MIM-23 HAWK
+    Short Range:
+    - Roland
+
     Author: Claude Code
-    Version: 1.1
+    Version: 1.2
 ]]
 
 SAMSIM = SAMSIM or {}
 SAMSIM.Unified = {}
-SAMSIM.Unified.Version = "1.1.0"
+SAMSIM.Unified.Version = "1.2.0"
 
 -- ============================================================================
 -- System Registry
 -- ============================================================================
 SAMSIM.Unified.Systems = {
+    -- Eastern Bloc Systems
     SA2 = {
         name = "SA-2 Guideline",
         natoName = "SA-2 Guideline",
         sovietName = "S-75 Dvina",
-        controller = nil,  -- Will be set when loaded
+        side = "EASTERN",
+        category = "long_range",
+        controller = nil,
         loaded = false,
     },
     SA3 = {
         name = "SA-3 Goa",
         natoName = "SA-3 Goa",
         sovietName = "S-125 Neva/Pechora",
+        side = "EASTERN",
+        category = "long_range",
         controller = nil,
         loaded = false,
     },
@@ -44,6 +59,8 @@ SAMSIM.Unified.Systems = {
         name = "SA-6 Gainful",
         natoName = "SA-6 Gainful",
         sovietName = "2K12 Kub",
+        side = "EASTERN",
+        category = "medium_range",
         controller = nil,
         loaded = false,
     },
@@ -51,6 +68,8 @@ SAMSIM.Unified.Systems = {
         name = "SA-10 Grumble",
         natoName = "SA-10 Grumble",
         sovietName = "S-300PS",
+        side = "EASTERN",
+        category = "long_range",
         controller = nil,
         loaded = false,
     },
@@ -58,6 +77,8 @@ SAMSIM.Unified.Systems = {
         name = "SA-11 Gadfly",
         natoName = "SA-11 Gadfly",
         sovietName = "9K37 Buk",
+        side = "EASTERN",
+        category = "medium_range",
         controller = nil,
         loaded = false,
     },
@@ -65,6 +86,7 @@ SAMSIM.Unified.Systems = {
         name = "SA-8 Gecko",
         natoName = "SA-8 Gecko",
         sovietName = "9K33 Osa",
+        side = "EASTERN",
         category = "short_range",
         controller = nil,
         loaded = false,
@@ -73,6 +95,7 @@ SAMSIM.Unified.Systems = {
         name = "SA-15 Gauntlet",
         natoName = "SA-15 Gauntlet",
         sovietName = "9K330 Tor",
+        side = "EASTERN",
         category = "short_range",
         controller = nil,
         loaded = false,
@@ -81,6 +104,36 @@ SAMSIM.Unified.Systems = {
         name = "SA-19 Grison",
         natoName = "SA-19 Grison",
         sovietName = "2K22 Tunguska",
+        side = "EASTERN",
+        category = "short_range",
+        controller = nil,
+        loaded = false,
+    },
+
+    -- Western Systems
+    PATRIOT = {
+        name = "MIM-104 Patriot",
+        natoName = "Patriot",
+        designation = "MIM-104",
+        side = "WESTERN",
+        category = "long_range",
+        controller = nil,
+        loaded = false,
+    },
+    HAWK = {
+        name = "MIM-23 HAWK",
+        natoName = "HAWK",
+        designation = "MIM-23",
+        side = "WESTERN",
+        category = "medium_range",
+        controller = nil,
+        loaded = false,
+    },
+    ROLAND = {
+        name = "Roland",
+        natoName = "Roland",
+        designation = "Roland 2/3",
+        side = "WESTERN",
         category = "short_range",
         controller = nil,
         loaded = false,
@@ -106,6 +159,7 @@ function SAMSIM.Unified.createSite(siteId, systemType, name, position, heading)
 
     -- Get the appropriate controller
     local controller = nil
+    -- Eastern Bloc Systems
     if systemType == "SA2" and SAMSIM and SAMSIM.State then
         controller = SAMSIM
     elseif systemType == "SA3" and SAMSIM_SA3 then
@@ -122,6 +176,13 @@ function SAMSIM.Unified.createSite(siteId, systemType, name, position, heading)
         controller = SA15_SAMSIM
     elseif systemType == "SA19" and SA19_SAMSIM then
         controller = SA19_SAMSIM
+    -- Western Systems
+    elseif systemType == "PATRIOT" and PATRIOT_SAMSIM then
+        controller = PATRIOT_SAMSIM
+    elseif systemType == "HAWK" and HAWK_SAMSIM then
+        controller = HAWK_SAMSIM
+    elseif systemType == "ROLAND" and ROLAND_SAMSIM then
+        controller = ROLAND_SAMSIM
     end
 
     if not controller then
@@ -494,7 +555,7 @@ function SAMSIM.Unified.initialize()
         SAMSIM.Unified.Systems.SA11.controller = SAMSIM_SA11
     end
 
-    -- Short Range Systems
+    -- Short Range Systems (Eastern)
     if SA8_SAMSIM then
         SAMSIM.Unified.Systems.SA8.loaded = true
         SAMSIM.Unified.Systems.SA8.controller = SA8_SAMSIM
@@ -506,6 +567,20 @@ function SAMSIM.Unified.initialize()
     if SA19_SAMSIM then
         SAMSIM.Unified.Systems.SA19.loaded = true
         SAMSIM.Unified.Systems.SA19.controller = SA19_SAMSIM
+    end
+
+    -- Western Systems
+    if PATRIOT_SAMSIM then
+        SAMSIM.Unified.Systems.PATRIOT.loaded = true
+        SAMSIM.Unified.Systems.PATRIOT.controller = PATRIOT_SAMSIM
+    end
+    if HAWK_SAMSIM then
+        SAMSIM.Unified.Systems.HAWK.loaded = true
+        SAMSIM.Unified.Systems.HAWK.controller = HAWK_SAMSIM
+    end
+    if ROLAND_SAMSIM then
+        SAMSIM.Unified.Systems.ROLAND.loaded = true
+        SAMSIM.Unified.Systems.ROLAND.controller = ROLAND_SAMSIM
     end
 
     -- Initialize network
@@ -559,6 +634,23 @@ end
 -- Create a complete SA-19 Tunguska vehicle
 function SAMSIM.Unified.createSA19Vehicle(name, position, heading)
     return SAMSIM.Unified.createSite(name or "SA19_1", "SA19", name, position, heading)
+end
+
+-- === Western Systems ===
+
+-- Create a Patriot battery
+function SAMSIM.Unified.createPatriotBattery(name, position, heading)
+    return SAMSIM.Unified.createSite(name or "PATRIOT_1", "PATRIOT", name, position, heading)
+end
+
+-- Create a HAWK battery
+function SAMSIM.Unified.createHAWKBattery(name, position, heading)
+    return SAMSIM.Unified.createSite(name or "HAWK_1", "HAWK", name, position, heading)
+end
+
+-- Create a Roland vehicle
+function SAMSIM.Unified.createRolandVehicle(name, position, heading)
+    return SAMSIM.Unified.createSite(name or "ROLAND_1", "ROLAND", name, position, heading)
 end
 
 env.info("SAMSIM Unified Controller loaded - Version " .. SAMSIM.Unified.Version)
