@@ -8,13 +8,24 @@
     - SAM site threat assessment
     - Emission control (EMCON) recommendations
     - Decoy and countermeasures
+    - IADS Network Integration (v2.0)
 
     Author: Claude Code
-    Version: 1.0
+    Version: 2.0.0
 ]]
 
 SAMSIM_SEAD = {}
-SAMSIM_SEAD.Version = "1.0.0"
+SAMSIM_SEAD.Version = "2.0.0"
+
+-- ============================================================================
+-- IADS Integration Settings
+-- ============================================================================
+SAMSIM_SEAD.IADS = {
+    enabled = false,
+    network = nil,
+    autoEMCON = true,
+    backupActivation = true,
+}
 
 -- ============================================================================
 -- Configuration
@@ -689,13 +700,445 @@ function SAMSIM_SEAD.getStateForExport()
 end
 
 -- ============================================================================
+-- IADS Integration Functions
+-- ============================================================================
+
+--- Initialize SEAD with IADS network integration
+---@param options table Configuration options
+function SAMSIM_SEAD.initWithIADS(options)
+    options = options or {}
+
+    SAMSIM_SEAD.IADS.enabled = true
+    SAMSIM_SEAD.IADS.network = options.network
+    SAMSIM_SEAD.IADS.autoEMCON = options.autoEMCON ~= false
+    SAMSIM_SEAD.IADS.backupActivation = options.backupActivation ~= false
+
+    -- Register event handlers
+    if SAMSIM_Events then
+        -- Handle ARM launch events
+        SAMSIM_Events.addHandler(SAMSIM_Events.Type.ARM_LAUNCHED, function(data)
+            SAMSIM_SEAD.onARMLaunchIADS(data)
+        end, 10)
+
+        -- Handle ARM impact events
+        SAMSIM_Events.addHandler(SAMSIM_Events.Type.ARM_IMPACT, function(data)
+            SAMSIM_SEAD.onARMImpactIADS(data)
+        end, 10)
+
+        -- Handle SAM suppression events
+        SAMSIM_Events.addHandler(SAMSIM_Events.Type.SAM_SUPPRESSED, function(data)
+            SAMSIM_SEAD.onSAMSuppressedIADS(data)
+        end, 10)
+    end
+
+    if SAMSIM_Utils then
+        SAMSIM_Utils.info("SAMSIM_SEAD initialized with IADS integration")
+    end
+end
+
+--- Handle ARM launch event with IADS integration
+---@param data table Event data
+function SAMSIM_SEAD.onARMLaunchIADS(data)
+    if not SAMSIM_SEAD.IADS.enabled then return end
+
+    local network = SAMSIM_SEAD.IADS.network
+    if not network then return end
+
+    -- Identify target site from weapon trajectory
+    local targetNode = SAMSIM_SEAD.identifyARMTarget(data, network)
+
+    if targetNode then
+        -- Share threat across network
+        local threat = {
+            type = "ARM",
+            trackId = data.weapon and tostring(data.weapon),
+            weaponType = data.weapon and data.weapon.armConfig and data.weapon.armConfig.name,
+            targetSite = targetNode.groupName,
+            launchPosition = data.launchPosition,
+            estimatedTTI = SAMSIM_SEAD.calculateTTI(data.launchPosition, targetNode.position, data.weapon),
+        }
+
+        SAMSIM_IADS.shareThreat(network, threat, targetNode.id)
+
+        -- Auto EMCON if enabled
+        if SAMSIM_SEAD.IADS.autoEMCON then
+            SAMSIM_SEAD.recommendEMCONIADS(targetNode, "ARM_INBOUND")
+        end
+
+        -- Fire ARM detected event
+        SAMSIM_Events.fire(SAMSIM_Events.Type.ARM_DETECTED, {
+            targetSite = targetNode.groupName,
+            armType = threat.weaponType,
+            tti = threat.estimatedTTI,
+        })
+
+        if SAMSIM_Utils then
+            SAMSIM_Utils.warn("ARM detected targeting '%s', TTI: %.0fs",
+                targetNode.groupName, threat.estimatedTTI or 0)
+        end
+    end
+end
+
+--- Handle ARM impact event with IADS integration
+---@param data table Event data
+function SAMSIM_SEAD.onARMImpactIADS(data)
+    if not SAMSIM_SEAD.IADS.enabled then return end
+
+    local network = SAMSIM_SEAD.IADS.network
+    if not network then return end
+
+    -- Find affected node
+    local impactPos = data.lastPosition or data.position
+    if not impactPos then return end
+
+    -- Find nearest SAM site
+    local nearestNode, nearestDist = nil, math.huge
+    for _, node in pairs(network.sams) do
+        if node.position then
+            local dist = SAMSIM_Utils.getDistance3D(impactPos, node.position)
+            if dist < nearestDist then
+                nearestDist = dist
+                nearestNode = node
+            end
+        end
+    end
+
+    -- Apply damage if close enough
+    if nearestNode and nearestDist < 100 then
+        local severity = SAMSIM_SEAD.calculateARMDamage(nearestDist)
+
+        if severity > 0 then
+            SAMSIM_SEAD.applyDamage(nearestNode.groupName, "RADAR", severity)
+
+            -- Update IADS state
+            if severity >= 0.8 then
+                SAMSIM_IADS.setSiteState(nearestNode, SAMSIM_IADS.SamState.DAMAGED)
+            end
+
+            -- Activate backup
+            if SAMSIM_SEAD.IADS.backupActivation then
+                SAMSIM_IADS.activateBackup(network, nearestNode)
+            end
+
+            if SAMSIM_Utils then
+                SAMSIM_Utils.warn("ARM impact near '%s', damage: %.0f%%",
+                    nearestNode.groupName, severity * 100)
+            end
+        end
+    end
+end
+
+--- Handle SAM suppression event
+---@param data table Event data
+function SAMSIM_SEAD.onSAMSuppressedIADS(data)
+    if not SAMSIM_SEAD.IADS.enabled then return end
+
+    local network = SAMSIM_SEAD.IADS.network
+    if not network then return end
+
+    -- Find the node
+    local node = nil
+    for _, n in pairs(network.sams) do
+        if n.groupName == data.groupName then
+            node = n
+            break
+        end
+    end
+
+    if node and SAMSIM_SEAD.IADS.backupActivation then
+        SAMSIM_IADS.activateBackup(network, node)
+    end
+end
+
+--- Identify ARM target from launch data
+---@param data table Launch event data
+---@param network table IADS network
+---@return table|nil Target node
+function SAMSIM_SEAD.identifyARMTarget(data, network)
+    if not data.launchPosition then return nil end
+
+    local launchPos = data.launchPosition
+    local initiatorHeading = 0
+
+    if data.initiator and data.initiator.position then
+        -- Calculate launch heading
+        initiatorHeading = SAMSIM_Utils.getHeading(
+            data.initiator.position,
+            launchPos
+        )
+    end
+
+    -- Find SAM sites in the general direction
+    local candidates = {}
+
+    for _, node in pairs(network.sams) do
+        if node.position and node.state ~= SAMSIM_IADS.SamState.DESTROYED then
+            local dist = SAMSIM_Utils.getDistance2D(launchPos, node.position)
+            local bearing = SAMSIM_Utils.getHeading(launchPos, node.position)
+
+            -- Check if site is in front of launcher
+            local angleDiff = math.abs(bearing - initiatorHeading)
+            if angleDiff > math.pi then
+                angleDiff = 2 * math.pi - angleDiff
+            end
+
+            -- Within 60 degrees of heading and reasonable range
+            if angleDiff < math.rad(60) and dist < 150000 then
+                candidates[#candidates + 1] = {
+                    node = node,
+                    distance = dist,
+                    angleDiff = angleDiff,
+                    emitting = node.state == SAMSIM_IADS.SamState.ACTIVE or
+                              node.state == SAMSIM_IADS.SamState.TRACKING or
+                              node.state == SAMSIM_IADS.SamState.ENGAGING,
+                }
+            end
+        end
+    end
+
+    -- Sort by priority: emitting first, then by distance
+    table.sort(candidates, function(a, b)
+        if a.emitting ~= b.emitting then
+            return a.emitting
+        end
+        return a.distance < b.distance
+    end)
+
+    if #candidates > 0 then
+        return candidates[1].node
+    end
+
+    return nil
+end
+
+--- Calculate time to impact for ARM
+---@param launchPos table Launch position
+---@param targetPos table Target position
+---@param weaponData table|nil Weapon data
+---@return number TTI in seconds
+function SAMSIM_SEAD.calculateTTI(launchPos, targetPos, weaponData)
+    if not launchPos or not targetPos then return 60 end
+
+    local dist = SAMSIM_Utils.getDistance3D(launchPos, targetPos)
+
+    -- Get ARM speed from config or default
+    local speed = 680  -- Default HARM speed m/s
+
+    if weaponData and weaponData.armConfig then
+        speed = weaponData.armConfig.speed or speed
+    end
+
+    return dist / speed
+end
+
+--- Calculate ARM damage based on miss distance
+---@param missDistance number Distance from impact to target
+---@return number Damage severity (0-1)
+function SAMSIM_SEAD.calculateARMDamage(missDistance)
+    local vulnConfig = SAMSIM_SEAD.Config.vulnerability
+
+    if missDistance <= vulnConfig.radarKillRadius then
+        return 1.0  -- Direct hit
+    elseif missDistance <= vulnConfig.launcherKillRadius then
+        return 0.7
+    elseif missDistance <= vulnConfig.commandKillRadius then
+        return 0.5
+    elseif missDistance <= 50 then
+        return 0.3
+    elseif missDistance <= 100 then
+        return 0.1
+    end
+
+    return 0
+end
+
+--- Recommend EMCON for a node
+---@param node table SAM node
+---@param reason string Reason for recommendation
+function SAMSIM_SEAD.recommendEMCONIADS(node, reason)
+    if not SAMSIM_SEAD.IADS.enabled then return end
+
+    local network = SAMSIM_SEAD.IADS.network
+    if not network then return end
+
+    -- Set site to DARK
+    SAMSIM_IADS.setSiteState(node, SAMSIM_IADS.SamState.DARK)
+
+    -- Set suppression timeout
+    local armConfig = SAMSIM_SEAD.Config.emcon
+    local duration = armConfig.restartDelay or 60
+
+    node.suppressedUntil = SAMSIM_Utils.getTime() + duration
+
+    -- Fire suppression event
+    SAMSIM_Events.samSuppressed(node.groupName, duration)
+
+    if SAMSIM_Utils then
+        SAMSIM_Utils.info("EMCON activated for '%s' (%s), duration: %ds",
+            node.groupName, reason, duration)
+    end
+end
+
+--- Suppress a group with IADS notification
+---@param groupName string Group name
+---@param duration number Suppression duration
+---@param network table|nil IADS network (optional, uses default if nil)
+function SAMSIM_SEAD.suppressGroup(groupName, duration, network)
+    network = network or SAMSIM_SEAD.IADS.network
+
+    -- Apply alarm state
+    if SAMSIM_Utils then
+        SAMSIM_Utils.setGroupAlarmStateByName(groupName, SAMSIM_Utils.ALARM_STATE.GREEN)
+    else
+        local group = Group.getByName(groupName)
+        if group then
+            local controller = group:getController()
+            if controller then
+                controller:setOption(AI.Option.Ground.id.ALARM_STATE,
+                    AI.Option.Ground.val.ALARM_STATE.GREEN)
+            end
+        end
+    end
+
+    -- IADS notification
+    if network then
+        for _, node in pairs(network.sams) do
+            if node.groupName == groupName then
+                SAMSIM_IADS.setSiteState(node, SAMSIM_IADS.SamState.SUPPRESSED)
+                node.suppressedUntil = (SAMSIM_Utils and SAMSIM_Utils.getTime() or timer.getTime()) + duration
+
+                -- Activate backup
+                if SAMSIM_SEAD.IADS.backupActivation then
+                    SAMSIM_IADS.activateBackup(network, node)
+                end
+
+                break
+            end
+        end
+    end
+
+    -- Schedule reactivation
+    local reactivateFunc = function()
+        SAMSIM_SEAD.reactivateGroup(groupName, network)
+    end
+
+    if SAMSIM_Utils then
+        SAMSIM_Utils.schedule(reactivateFunc, duration)
+    else
+        timer.scheduleFunction(function()
+            reactivateFunc()
+        end, nil, timer.getTime() + duration)
+    end
+
+    -- Fire event
+    if SAMSIM_Events then
+        SAMSIM_Events.samSuppressed(groupName, duration)
+    end
+end
+
+--- Reactivate a suppressed group
+---@param groupName string Group name
+---@param network table|nil IADS network
+function SAMSIM_SEAD.reactivateGroup(groupName, network)
+    network = network or SAMSIM_SEAD.IADS.network
+
+    -- Apply alarm state
+    if SAMSIM_Utils then
+        SAMSIM_Utils.setGroupAlarmStateByName(groupName, SAMSIM_Utils.ALARM_STATE.RED)
+    else
+        local group = Group.getByName(groupName)
+        if group then
+            local controller = group:getController()
+            if controller then
+                controller:setOption(AI.Option.Ground.id.ALARM_STATE,
+                    AI.Option.Ground.val.ALARM_STATE.RED)
+            end
+        end
+    end
+
+    -- IADS notification
+    if network then
+        for _, node in pairs(network.sams) do
+            if node.groupName == groupName then
+                SAMSIM_IADS.setSiteState(node, SAMSIM_IADS.SamState.ACTIVE)
+                node.suppressedUntil = 0
+
+                -- Deactivate backup
+                if SAMSIM_SEAD.IADS.backupActivation then
+                    SAMSIM_IADS.deactivateBackup(network, node)
+                end
+
+                break
+            end
+        end
+    end
+
+    -- Fire event
+    if SAMSIM_Events then
+        SAMSIM_Events.samRecovered(groupName)
+    end
+end
+
+--- Get SEAD status for network
+---@param network table|nil IADS network
+---@return table Status summary
+function SAMSIM_SEAD.getNetworkSEADStatus(network)
+    network = network or SAMSIM_SEAD.IADS.network
+
+    local status = {
+        armsInFlight = #SAMSIM_SEAD.State.armsInFlight,
+        activeJammers = #SAMSIM_SEAD.State.detectedJammers,
+        suppressedSites = 0,
+        threatLevels = {
+            critical = 0,
+            high = 0,
+            moderate = 0,
+            low = 0,
+        },
+    }
+
+    if network then
+        for _, node in pairs(network.sams) do
+            if node.state == SAMSIM_IADS.SamState.SUPPRESSED then
+                status.suppressedSites = status.suppressedSites + 1
+            end
+        end
+    end
+
+    for _, threat in pairs(SAMSIM_SEAD.State.siteThreatLevels) do
+        local level = string.lower(threat.level or "low")
+        if status.threatLevels[level] then
+            status.threatLevels[level] = status.threatLevels[level] + 1
+        end
+    end
+
+    return status
+end
+
+-- ============================================================================
 -- Initialization
 -- ============================================================================
-function SAMSIM_SEAD.initialize()
-    -- Start update loop
-    timer.scheduleFunction(SAMSIM_SEAD.update, nil, timer.getTime() + 1)
+function SAMSIM_SEAD.initialize(options)
+    options = options or {}
 
-    env.info("SAMSIM SEAD Module initialized - Version " .. SAMSIM_SEAD.Version)
+    -- Initialize with IADS if network provided
+    if options.network then
+        SAMSIM_SEAD.initWithIADS(options)
+    end
+
+    -- Start update loop
+    if SAMSIM_Utils then
+        SAMSIM_Utils.scheduleRepeat(SAMSIM_SEAD.update, 0.5)
+        SAMSIM_Utils.info("SAMSIM_SEAD v%s initialized", SAMSIM_SEAD.Version)
+    else
+        timer.scheduleFunction(SAMSIM_SEAD.update, nil, timer.getTime() + 1)
+        env.info("SAMSIM SEAD Module initialized - Version " .. SAMSIM_SEAD.Version)
+    end
+end
+
+-- Support old initialization method
+function SAMSIM_SEAD.init(options)
+    return SAMSIM_SEAD.initialize(options)
 end
 
 env.info("SAMSIM SEAD Module loaded - Version " .. SAMSIM_SEAD.Version)
